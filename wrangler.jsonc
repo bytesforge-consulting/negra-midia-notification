@@ -13,6 +13,48 @@
 	},
 	"observability": {
 		"enabled": true
+	},
+	/**
+	 * D1 Database
+	 * https://developers.cloudflare.com/d1/
+	 */
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "negra-midia-db",
+			"database_id": "b0cf9329-4048-473c-bebe-d7f8248b4ebd"
+		}
+	],
+	/**
+	 * Environment Variables - Configurações CORS
+	 * Todas as configurações vêm diretamente das variáveis de ambiente
+	 */
+	"vars": {
+		// Origens permitidas (separadas por vírgula, use * para todas)
+		"ALLOWED_ORIGINS": "http://localhost:4200,http://localhost:3000,https://negramidia.com,https://*.negramidia.com",
+		
+		// Permitir credenciais (cookies, auth headers)
+		"CORS_CREDENTIALS": "true",
+		
+		// Cache do preflight em segundos
+		"CORS_MAX_AGE": "86400",
+		
+		// Métodos HTTP permitidos
+		"CORS_METHODS": "GET,POST,PUT,DELETE,OPTIONS,PATCH",
+		
+		// Headers permitidos
+		"CORS_HEADERS": "Content-Type,Authorization,X-Requested-With,X-API-Key,Accept",
+		
+		// Ambiente (development, staging, production)
+		"ENVIRONMENT": "development"
+	},
+	/**
+	 * Workers AI (nativo da Cloudflare)
+	 * https://developers.cloudflare.com/workers-ai/
+	 * Não precisa de gateway ou chaves de API
+	 */
+	"ai": {
+		"binding": "AI"
 	}
 	/**
 	 * Smart Placement
@@ -25,11 +67,6 @@
 	 * databases, object storage, AI inference, real-time communication and more.
 	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
 	 */
-	/**
-	 * Environment Variables
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-	 */
-	// "vars": { "MY_VARIABLE": "production_value" }
 	/**
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/

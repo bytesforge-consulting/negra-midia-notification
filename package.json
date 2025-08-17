@@ -1,10 +1,21 @@
 {
-	"name": "d1-tutorial",
+	"name": "negra-midia-notify-api",
+	"version": "1.0.0",
+	"description": "API serverless para notificações com IA - Parte do ecossistema Negra Mídia",
 	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/bytesforge-consulting/negra-midia-notification"
+	},
+	"homepage": "https://github.com/bytesforge-consulting/negra-midia-notification#readme",
+	"keywords": ["cloudflare", "workers", "d1", "ai", "notifications", "negra-midia"],
 	"scripts": {
-		"dev": "wrangler dev",
+		"dev": "wrangler dev --local",
+		"dev:remote": "wrangler dev",
 		"deploy": "wrangler deploy --minify",
-		"cf-typegen": "wrangler types --env-interface CloudflareBindings"
+		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
+		"d1:local": "wrangler d1 execute DB --local",
+		"d1:setup": "wrangler d1 execute DB --local --file=./schema.sql"
 	},
 	"dependencies": {
 		"hono": "^4.9.2"
