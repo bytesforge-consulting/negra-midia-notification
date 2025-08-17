@@ -1,5 +1,5 @@
-import { cors } from "hono/cors";
-import type { Context, Next } from "hono";
+import { cors } from 'hono/cors';
+import type { Context, Next } from 'hono';
 
 // Configurações padrão de CORS (fallback se não definidas na plataforma)
 const DEFAULT_CORS_CONFIG = {
@@ -13,13 +13,13 @@ const DEFAULT_CORS_CONFIG = {
 // Log de origem das configurações (para debug)
 const logConfigSource = (env: CloudflareBindings) => {
   const sources: string[] = [];
-  
+
   if (env.ALLOWED_ORIGINS && env.ALLOWED_ORIGINS !== DEFAULT_CORS_CONFIG.ALLOWED_ORIGINS) {
     sources.push('ALLOWED_ORIGINS: Plataforma');
   } else {
     sources.push('ALLOWED_ORIGINS: wrangler.jsonc');
   }
-  
+
   if (env.ENVIRONMENT === 'development') {
     console.log('🔧 CORS Sources:', sources.join(', '));
   }
@@ -36,16 +36,22 @@ const getEnvConfig = (env: CloudflareBindings) => ({
 
 // Função para validar origem
 const isOriginAllowed = (origin: string | undefined, allowedOrigins: string): boolean => {
-  if (!origin) return true; // Requests diretos (sem origem)
-  
+  if (!origin) {
+    return true;
+  } // Requests diretos (sem origem)
+
   const origins = allowedOrigins.split(',').map(o => o.trim());
-  
+
   // Se contém '*', permitir todas
-  if (origins.includes('*')) return true;
-  
+  if (origins.includes('*')) {
+    return true;
+  }
+
   // Verificar origem exata
-  if (origins.includes(origin)) return true;
-  
+  if (origins.includes(origin)) {
+    return true;
+  }
+
   // Verificar wildcards (ex: *.negramidia.com)
   return origins.some(allowedOrigin => {
     if (allowedOrigin.startsWith('*.')) {
@@ -59,7 +65,7 @@ const isOriginAllowed = (origin: string | undefined, allowedOrigins: string): bo
 // Middleware CORS configurável via variáveis de ambiente
 export const corsMiddleware = async (c: Context, next: Next) => {
   const config = getEnvConfig(c.env);
-  
+
   // Log das configurações e suas origens em desenvolvimento
   if (c.env.ENVIRONMENT === 'development') {
     logConfigSource(c.env);
@@ -72,19 +78,19 @@ export const corsMiddleware = async (c: Context, next: Next) => {
   }
 
   const corsHandler = cors({
-    origin: (origin, ctx) => {
+    origin: (origin, _ctx) => {
       const allowed = isOriginAllowed(origin, config.allowedOrigins);
-      
+
       if (!allowed && c.env.ENVIRONMENT === 'development') {
         console.warn(`❌ CORS: Origem rejeitada: ${origin}`);
       }
-      
+
       return allowed ? origin : null;
     },
     allowMethods: config.methods,
     allowHeaders: config.headers,
     credentials: config.credentials,
-    maxAge: config.maxAge,
+    maxAge: config.maxAge
   });
 
   return corsHandler(c, next);

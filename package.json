@@ -1,41 +1,65 @@
 {
-	"name": "negra-midia-notify-api",
-	"version": "1.0.0",
-	"description": "API serverless para notificações com IA - Parte do ecossistema Negra Mídia",
-	"type": "module",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/bytesforge-consulting/negra-midia-notification"
-	},
-	"homepage": "https://github.com/bytesforge-consulting/negra-midia-notification#readme",
-	"keywords": [
-		"cloudflare",
-		"workers",
-		"d1",
-		"ai",
-		"notifications",
-		"negra-midia"
-	],
-	"scripts": {
-		"dev": "wrangler dev --local",
-		"dev:remote": "wrangler dev",
-		"deploy": "wrangler deploy --minify",
-		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
-		"d1:local": "wrangler d1 execute DB --local",
-		"d1:setup": "wrangler d1 execute DB --local --file=./schema.sql",
-		"prisma:generate": "prisma generate",
-		"prisma:push": "prisma db push",
-		"prisma:studio": "prisma studio"
-	},
-	"dependencies": {
-		"@prisma/adapter-d1": "^6.0.0",
-		"@prisma/client": "^6.0.0",
-		"@types/date-fns": "^2.5.3",
-		"date-fns-tz": "^2.0.1",
-		"hono": "^4.9.2"
-	},
-	"devDependencies": {
-		"prisma": "^6.0.0",
-		"wrangler": "^4.30.0"
-	}
+  "name": "negra-midia-notify-api",
+  "version": "1.0.0",
+  "description": "API serverless para notificações com IA - Parte do ecossistema Negra Mídia",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bytesforge-consulting/negra-midia-notification"
+  },
+  "homepage": "https://github.com/bytesforge-consulting/negra-midia-notification#readme",
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "d1",
+    "ai",
+    "notifications",
+    "negra-midia"
+  ],
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "dev:remote": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "d1:local": "wrangler d1 execute DB --local",
+    "d1:setup": "wrangler d1 execute DB --local --file=./schema.sql",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:studio": "prisma studio",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky install",
+    "check": "npm run lint && npm run format:check"
+  },
+  "dependencies": {
+    "@prisma/adapter-d1": "^6.0.0",
+    "@prisma/client": "^6.0.0",
+    "@types/date-fns": "^2.5.3",
+    "date-fns-tz": "^2.0.1",
+    "hono": "^4.9.2"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
+    "prisma": "^6.0.0",
+    "typescript": "^5.3.0",
+    "wrangler": "^4.30.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
 }

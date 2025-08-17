@@ -19,11 +19,11 @@ export const createPrismaClient = (d1Database: D1Database): PrismaClient => {
 
   // Criar adapter D1 para Prisma
   const adapter = new PrismaD1(d1Database);
-  
+
   // Criar cliente Prisma com adapter D1
-  prismaInstance = new PrismaClient({ 
+  prismaInstance = new PrismaClient({
     adapter,
-    log: ['error', 'warn'], // Logs apenas para erros e warnings
+    log: ['error', 'warn'] // Logs apenas para erros e warnings
   });
 
   return prismaInstance;
@@ -52,6 +52,8 @@ export const resetPrismaInstance = (): void => {
  * Tipos utilitários para facilitar o uso
  */
 export type PrismaTransaction = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];
-export type NotificationWhereInput = Parameters<PrismaClient['notification']['findMany']>[0]['where'];
+export type NotificationWhereInput = Parameters<
+  PrismaClient['notification']['findMany']
+>[0]['where'];
 export type NotificationCreateInput = Parameters<PrismaClient['notification']['create']>[0]['data'];
 export type NotificationUpdateInput = Parameters<PrismaClient['notification']['update']>[0]['data'];

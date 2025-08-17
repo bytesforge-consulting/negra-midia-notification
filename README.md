@@ -3,12 +3,14 @@
 API serverless para sistema de notificações com IA integrada, construída com Cloudflare Workers, D1 Database e Workers AI.
 
 > **Repositórios do Ecossistema:**
+>
 > - **Este Projeto (API):** [negra-midia-notification](https://github.com/bytesforge-consulting/negra-midia-notification)
 > - **Projeto Principal (Angular):** [NegraMidia](https://github.com/bytesforge-consulting/NegraMidia) - Plataforma completa de Marketing Digital
 
 ## Visão Geral
 
 Esta API oferece:
+
 - **Gerenciamento de notificações** com CRUD completo
 - **IA integrada** para geração automática de conteúdo
 - **Performance edge** com Cloudflare Workers
@@ -32,6 +34,7 @@ Esta API oferece:
 ## Início Rápido
 
 ### Pré-requisitos
+
 - Node.js 18+
 - Conta Cloudflare (Workers Paid para D1 e AI)
 - Git
@@ -76,10 +79,12 @@ curl -X POST http://localhost:8787/ai/generate \
 ### 📋 Endpoints da API
 
 #### **Sistema**
+
 - `GET /` - Informações da API e endpoints disponíveis
 - `GET /health` - Status dos serviços (notifications, ai, database)
 
 #### **📧 Notificações**
+
 - `GET /notifications` - Listar todas as notificações
 - `GET /notifications/paginate` - **🆕 Buscar com paginação e filtro por nome/email**
 - `GET /notifications/:id` - Buscar notificação por ID (marca como lida)
@@ -87,17 +92,20 @@ curl -X POST http://localhost:8787/ai/generate \
 - `PUT /notifications/:id/read` - Marcar como lida manualmente
 
 #### **IA (Workers AI + Integração D1)**
+
 - `POST /ai/generate` - Geração livre de texto
 - `POST /ai/generate-notification` - Gerar notificação automaticamente
 - `POST /ai/summarize-notifications` - Resumir notificações por período
 - `GET /ai/models` - Listar modelos disponíveis
 
 **Novos - IA + D1 Integração:**
+
 - `POST /ai/process-unread` - **Processar notificações não lidas com IA e marcar como lidas**
-- `POST /ai/analyze-unread` - Analisar notificações não lidas SEM marcar como lidas  
+- `POST /ai/analyze-unread` - Analisar notificações não lidas SEM marcar como lidas
 - `GET /ai/daily-digest` - Resumo diário inteligente (marca urgentes como lidas)
 
 **Configuração de Gateway:**
+
 - Todas as chamadas de IA passam pelo Gateway configurado via `AI_GATEWAY_NAME`
 - Oferece analytics avançados, cache e controle de rate limiting
 - Logs detalhados de uso e performance da IA
@@ -119,6 +127,7 @@ curl -X POST http://localhost:8787/ai/generate \
 Para segurança, os IDs sensíveis são configurados via variáveis de ambiente:
 
 **Variáveis obrigatórias:**
+
 ```bash
 # Arquivo: .dev.vars (desenvolvimento local)
 D1_DATABASE_ID=sua-database-id-aqui
@@ -159,9 +168,9 @@ wrangler d1 list
 # 2. No menu lateral: AI → AI Gateway
 # 3. Clique no gateway que você criou (ex: "negra-midia")
 # 4. Copie o "Gateway ID" que aparece no topo da página
-# 
+#
 # Formato: 76dc5dcedb556fcf4f6a675feb112339
-# 
+#
 # Se você não tem um gateway ainda:
 # 1. Clique em "Create gateway"
 # 2. Nome: negra-midia (ou outro de sua escolha)
@@ -223,6 +232,7 @@ ls -la .dev.vars
 ```
 
 **Configuração Produção (Cloudflare):**
+
 ```bash
 # Via CLI (Secrets - mais seguro)
 wrangler secret put D1_DATABASE_ID
@@ -238,7 +248,7 @@ wrangler secret put AI_GATEWAY_NAME
 As configurações de CORS seguem **ordem de precedência** (maior para menor):
 
 1. **Secrets** (Plataforma Cloudflare) - **MAIOR PRIORIDADE**
-2. **Environment Variables** (Plataforma Cloudflare)  
+2. **Environment Variables** (Plataforma Cloudflare)
 3. **vars** (wrangler.jsonc) - **MENOR PRIORIDADE**
 
 ##### **Configuração na Plataforma (Recomendado para Produção)**
@@ -249,7 +259,7 @@ As configurações de CORS seguem **ordem de precedência** (maior para menor):
 
 # Adicionar variáveis:
 ALLOWED_ORIGINS = "https://negramidia.com,https://app.negramidia.com,https://admin.negramidia.com"
-CORS_CREDENTIALS = "true"  
+CORS_CREDENTIALS = "true"
 CORS_MAX_AGE = "86400"
 ENVIRONMENT = "production"
 ```
@@ -259,7 +269,7 @@ ENVIRONMENT = "production"
 wrangler secret put ALLOWED_ORIGINS
 # Digite: https://negramidia.com,https://app.negramidia.com
 
-wrangler secret put CORS_CREDENTIALS  
+wrangler secret put CORS_CREDENTIALS
 # Digite: true
 
 # Via Wrangler CLI (Environment Variables):
@@ -273,7 +283,7 @@ wrangler env put ENVIRONMENT production
   "vars": {
     // AVISO: Estas são configurações FALLBACK - sobrescritas pela plataforma
     "ALLOWED_ORIGINS": "http://localhost:4200,http://localhost:3000",
-    "CORS_CREDENTIALS": "true", 
+    "CORS_CREDENTIALS": "true",
     "CORS_MAX_AGE": "86400",
     "CORS_METHODS": "GET,POST,PUT,DELETE,OPTIONS,PATCH",
     "CORS_HEADERS": "Content-Type,Authorization,X-Requested-With,X-API-Key,Accept",
@@ -287,7 +297,7 @@ wrangler env put ENVIRONMENT production
 ```bash
 # DESENVOLVIMENTO (wrangler.jsonc)
 ALLOWED_ORIGINS = "*"
-CORS_CREDENTIALS = "false" 
+CORS_CREDENTIALS = "false"
 ENVIRONMENT = "development"
 
 # STAGING (Plataforma Cloudflare)
@@ -360,7 +370,10 @@ cp .dev.vars.example .dev.vars
 # 3. Verificar configuração
 cat .dev.vars
 
-# 4. Iniciar desenvolvimento
+# 4. Configurar qualidade de código (hooks Git)
+npm run prepare
+
+# 5. Iniciar desenvolvimento
 npm run dev
 ```
 
@@ -369,12 +382,14 @@ npm run dev
 O Wrangler oferece excelente suporte local:
 
 **D1 Local:**
+
 - SQLite local em `.wrangler/state/d1/DB.sqlite3`
 - Schema aplicado automaticamente
 - Dados persistem entre reinicializações
 - Mesma API que produção
 
 **Workers AI Local:**
+
 - Proxy para API Cloudflare (requests reais)
 - Autenticação automática via `wrangler auth`
 - Rate limits de desenvolvimento
@@ -412,7 +427,7 @@ curl -X POST http://localhost:8787/notifications \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Teste Local",
-    "email": "teste@local.dev", 
+    "email": "teste@local.dev",
     "phone": "11999999999",
     "body": "Testando D1 local",
     "subject": "D1 Local Test"
@@ -440,6 +455,7 @@ curl -X POST http://localhost:8787/ai/generate-notification \
 A API está configurada para usar o **AI Gateway da Cloudflare** para todas as chamadas de IA:
 
 #### **Configuração Atual:**
+
 ```jsonc
 // wrangler.jsonc
 "ai": {
@@ -533,12 +549,13 @@ curl -X POST https://seu-worker.workers.dev/ai/generate \
 // wrangler.jsonc
 {
   "ai": {
-    "binding": "AI"  // Simples assim!
+    "binding": "AI" // Simples assim!
   }
 }
 ```
 
 **✅ Vantagens:**
+
 - Sem chaves de API
 - Billing integrado Cloudflare
 - Latência baixa (edge)
@@ -546,11 +563,11 @@ curl -X POST https://seu-worker.workers.dev/ai/generate \
 
 #### **Modelos Disponíveis**
 
-| Modelo | Tipo | Uso Recomendado |
-|--------|------|-----------------|
-| `@cf/meta/llama-3.1-8b-instruct` | Chat | Conversação geral, conteúdo longo |
-| `@cf/microsoft/phi-2` | Chat | Respostas rápidas, conteúdo curto |
-| `@cf/mistral/mistral-7b-instruct-v0.1` | Chat | Multilíngue, ótimo para PT-BR |
+| Modelo                                 | Tipo | Uso Recomendado                   |
+| -------------------------------------- | ---- | --------------------------------- |
+| `@cf/meta/llama-3.1-8b-instruct`       | Chat | Conversação geral, conteúdo longo |
+| `@cf/microsoft/phi-2`                  | Chat | Respostas rápidas, conteúdo curto |
+| `@cf/mistral/mistral-7b-instruct-v0.1` | Chat | Multilíngue, ótimo para PT-BR     |
 
 #### **Exemplos de Uso**
 
@@ -567,7 +584,7 @@ curl -X POST /ai/generate-notification \
 curl -X POST /ai/summarize-notifications \
   -d '{
     "notifications": [...],
-    "timeframe": "week"  
+    "timeframe": "week"
   }'
 ```
 
@@ -599,11 +616,13 @@ negra-midia-notify-api/
 ### 📊 Monitoramento
 
 #### **Dashboard Cloudflare**
+
 - Workers Analytics (requests, errors, CPU)
 - D1 Analytics (reads, writes, storage)
 - AI Usage (tokens, models, costs)
 
 #### **Logs**
+
 ```bash
 # Logs em tempo real
 npx wrangler tail
@@ -624,6 +643,42 @@ npx wrangler tail --format=pretty --status=error
 - **Workers**: Incluído em planos paid
 - **D1**: 25M reads, 50k writes/mês grátis
 - **Workers AI**: Por neuron usage, barato para uso normal
+
+## 🔧 Qualidade de Código
+
+### **ESLint + Prettier + lint-staged**
+
+**Scripts Disponíveis:**
+
+```bash
+# Verificar problemas de linting
+npm run lint
+
+# Corrigir problemas automaticamente
+npm run lint:fix
+
+# Formatar código com Prettier
+npm run format
+
+# Verificar formatação sem alterar
+npm run format:check
+
+# Executar lint + formatação
+npm run check
+```
+
+**Automação Git:**
+
+- ✅ **pre-commit**: Executa lint-staged (formata apenas arquivos staged)
+- ✅ **pre-push**: Executa lint + format check completo
+- ✅ **VS Code**: Formatação automática ao salvar
+
+**Configurações:**
+
+- ✅ **TypeScript** suporte completo
+- ✅ **Cloudflare Workers** ambiente configurado
+- ✅ **Prettier** integrado com ESLint
+- ✅ **Ignorar arquivos** gerados (.wrangler, migrations)
 
 ## 🤖 Exemplos Práticos de IA
 
@@ -765,13 +820,20 @@ export class NotificationService {
   // IA Features
   generateWithAI(context: string, type: 'email' | 'sms' | 'push' = 'email'): Observable<any> {
     return this.http.post(`${this.apiUrl}/ai/generate-notification`, {
-      context, type, tone: 'friendly', language: 'pt-BR'
+      context,
+      type,
+      tone: 'friendly',
+      language: 'pt-BR'
     });
   }
 
-  summarizeNotifications(notifications: AppNotification[], timeframe: string = 'week'): Observable<any> {
+  summarizeNotifications(
+    notifications: AppNotification[],
+    timeframe: string = 'week'
+  ): Observable<any> {
     return this.http.post(`${this.apiUrl}/ai/summarize-notifications`, {
-      notifications, timeframe
+      notifications,
+      timeframe
     });
   }
 }
@@ -786,7 +848,7 @@ export class NotificationService {
   template: `
     <div class="dashboard">
       <h1>📊 Dashboard Negra Mídia</h1>
-      
+
       <!-- Métricas -->
       <div class="metrics">
         <div class="metric-card">
@@ -826,7 +888,9 @@ export class DashboardComponent implements OnInit {
 
   constructor(private notificationService: NotificationService) {}
 
-  ngOnInit() { this.loadNotifications(); }
+  ngOnInit() {
+    this.loadNotifications();
+  }
 
   get unreadCount(): number {
     return this.notifications.filter(n => !n.read_at).length;
@@ -840,7 +904,7 @@ export class DashboardComponent implements OnInit {
 
   generateContent() {
     if (!this.context.trim()) return;
-    
+
     this.loading = true;
     this.notificationService.generateWithAI(this.context).subscribe(response => {
       this.loading = false;
@@ -914,6 +978,7 @@ npm run d1:local     # Executar SQL no banco local
 ### **Problemas Comuns**
 
 #### **"Binding DB not found"**
+
 ```bash
 rm -rf .wrangler/
 npm run cf-typegen
@@ -921,18 +986,21 @@ npm run dev
 ```
 
 #### **"AI requests failing"**
+
 ```bash
 npx wrangler auth login
 npx wrangler whoami  # Verificar autenticação
 ```
 
 #### **"Port 8787 already in use"**
+
 ```bash
 npx wrangler dev --local --port=3000
 # Ou matar processo: lsof -ti:8787 | xargs kill -9
 ```
 
 #### **Schema não aplicado**
+
 ```bash
 npm run d1:setup
 # Verificar: npm run d1:local --command="SELECT name FROM sqlite_master WHERE type='table';"
@@ -974,7 +1042,7 @@ model Notification {
   subject String
   sent_at DateTime  @default(now())
   read_at DateTime?
-  
+
   @@index([sent_at], name: "idx_notifications_sent_at")
   @@index([email], name: "idx_notifications_email")
   @@index([read_at], name: "idx_notifications_read_at")
@@ -985,16 +1053,23 @@ model Notification {
 ### **Exemplos de Uso:**
 
 **Antes (SQL cru):**
+
 ```typescript
-const { results } = await db.prepare(`
+const { results } = await db
+  .prepare(
+    `
   SELECT * FROM notifications 
   WHERE read_at IS NULL 
   ORDER BY sent_at DESC 
   LIMIT ?
-`).bind(10).all();
+`
+  )
+  .bind(10)
+  .all();
 ```
 
 **Depois (Prisma):**
+
 ```typescript
 const notifications = await prisma.notification.findMany({
   where: { read_at: null },
@@ -1010,7 +1085,7 @@ const notifications = await prisma.notification.findMany({
 npm run prisma:generate
 
 # Sincronizar schema com D1 (desenvolvimento)
-npm run prisma:push  
+npm run prisma:push
 
 # Abrir interface gráfica
 npm run prisma:studio
@@ -1042,7 +1117,7 @@ import { utcToZonedTime } from 'date-fns-tz';
 // Para obter hora atual do Brasil (simples e confiável)
 export const getBrazilTime = (): Date => {
   const now = new Date();
-  const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+  const brazilTime = new Date(now.getTime() - 3 * 60 * 60 * 1000);
   return brazilTime;
 };
 
@@ -1051,18 +1126,20 @@ export const getBrazilTimeAsUTC = (): Date => {
   const timeZone = 'America/Sao_Paulo';
   const now = new Date();
   const brazilTime = utcToZonedTime(now, timeZone);
-  
+
   // Criar data UTC com componentes da hora do Brasil
-  const adjustedDate = new Date(Date.UTC(
-    brazilTime.getFullYear(),
-    brazilTime.getMonth(),
-    brazilTime.getDate(),
-    brazilTime.getHours(),
-    brazilTime.getMinutes(),
-    brazilTime.getSeconds(),
-    brazilTime.getMilliseconds()
-  ));
-  
+  const adjustedDate = new Date(
+    Date.UTC(
+      brazilTime.getFullYear(),
+      brazilTime.getMonth(),
+      brazilTime.getDate(),
+      brazilTime.getHours(),
+      brazilTime.getMinutes(),
+      brazilTime.getSeconds(),
+      brazilTime.getMilliseconds()
+    )
+  );
+
   return adjustedDate;
 };
 
@@ -1070,8 +1147,12 @@ export const getBrazilTimeAsUTC = (): Date => {
 export const formatBrazilTime = (date: Date): string => {
   return new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Sao_Paulo',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
     timeZoneName: 'short'
   }).format(date);
 };
@@ -1095,6 +1176,7 @@ export const formatBrazilTime = (date: Date): string => {
 ### **Configuração Atual:**
 
 Schema configurado para controle total de timezone:
+
 - **Sem `@default(now())`** no campo `sent_at`
 - **Definição manual** em todas as operações
 - **Controle total** sobre quando e como as datas são definidas

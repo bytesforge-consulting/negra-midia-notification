@@ -1,5 +1,5 @@
-import type { Context, Next } from "hono";
-import { formatBrazilTime } from "../types";
+import type { Context, Next } from 'hono';
+import { formatBrazilTime } from '../types';
 
 interface LogRequest {
   method: string;
@@ -28,7 +28,7 @@ interface LogEntry {
  */
 export const loggerMiddleware = async (c: Context, next: Next) => {
   const env = c.env?.ENVIRONMENT || 'development';
-  
+
   // Só ativa logs detalhados em desenvolvimento
   if (env !== 'development') {
     return next();
@@ -36,7 +36,7 @@ export const loggerMiddleware = async (c: Context, next: Next) => {
 
   const startTime = Date.now();
   const timestamp = formatBrazilTime(new Date());
-  
+
   // Captura dados da requisição
   const request: LogRequest = {
     method: c.req.method,
@@ -61,16 +61,16 @@ export const loggerMiddleware = async (c: Context, next: Next) => {
     console.log(`BODY: [Sera logado apos processamento para nao interferir]`);
   }
 
-  let logEntry: LogEntry = { request };
+  const logEntry: LogEntry = { request };
 
   try {
     // Executa a próxima middleware/handler
     await next();
-    
+
     // Captura dados da resposta
     const endTime = Date.now();
     const duration = endTime - startTime;
-    
+
     const response: LogResponse = {
       status: c.res.status,
       duration,
@@ -87,23 +87,26 @@ export const loggerMiddleware = async (c: Context, next: Next) => {
     if (response.contentLength) {
       console.log(`TAMANHO: ${response.contentLength} bytes`);
     }
-    
+
     // Informações básicas da resposta
     const contentType = c.res.headers.get('Content-Type');
     if (contentType) {
       console.log(`CONTENT-TYPE: ${contentType}`);
     }
-    console.log(`HEADERS: ${Array.from(c.res.headers.entries()).map(([k, v]) => `${k}: ${v}`).join(', ')}`);
-    
-    // Nota: Body da resposta não é logado para evitar problemas de stream
-    
-    console.log('===== FIM REQUISICAO =====\n');
+    console.log(
+      `HEADERS: ${Array.from(c.res.headers.entries())
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ')}`
+    );
 
+    // Nota: Body da resposta não é logado para evitar problemas de stream
+
+    console.log('===== FIM REQUISICAO =====\n');
   } catch (error) {
     // Log de erro
     const endTime = Date.now();
     const duration = endTime - startTime;
-    
+
     logEntry.error = error instanceof Error ? error.message : String(error);
     logEntry.response = {
       status: 500,
@@ -125,10 +128,18 @@ export const loggerMiddleware = async (c: Context, next: Next) => {
  * Retorna texto indicativo baseado no status HTTP
  */
 function getStatusText(status: number): string {
-  if (status >= 200 && status < 300) return 'SUCCESS'; // Sucesso
-  if (status >= 300 && status < 400) return 'REDIRECT'; // Redirecionamento
-  if (status >= 400 && status < 500) return 'CLIENT_ERROR';  // Erro do cliente
-  if (status >= 500) return 'SERVER_ERROR'; // Erro do servidor
+  if (status >= 200 && status < 300) {
+    return 'SUCCESS';
+  } // Sucesso
+  if (status >= 300 && status < 400) {
+    return 'REDIRECT';
+  } // Redirecionamento
+  if (status >= 400 && status < 500) {
+    return 'CLIENT_ERROR';
+  } // Erro do cliente
+  if (status >= 500) {
+    return 'SERVER_ERROR';
+  } // Erro do servidor
   return 'UNKNOWN'; // Desconhecido
 }
 
@@ -137,14 +148,13 @@ function getStatusText(status: number): string {
  */
 export const productionLoggerMiddleware = async (c: Context, next: Next) => {
   const startTime = Date.now();
-  
+
   try {
     await next();
     const duration = Date.now() - startTime;
-    
+
     // Log simplificado para produção
     console.log(`${c.req.method} ${c.req.url} - ${c.res.status} - ${duration}ms`);
-    
   } catch (error) {
     const duration = Date.now() - startTime;
     console.error(`ERROR ${c.req.method} ${c.req.url} - ${duration}ms:`, error);
@@ -157,7 +167,7 @@ export const productionLoggerMiddleware = async (c: Context, next: Next) => {
  */
 export const adaptiveLoggerMiddleware = (c: Context, next: Next) => {
   const env = c.env?.ENVIRONMENT || 'development';
-  
+
   if (env === 'development') {
     return loggerMiddleware(c, next);
   } else {

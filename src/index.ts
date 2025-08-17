@@ -1,41 +1,41 @@
-import { Hono } from "hono";
-import { corsMiddleware } from "./middleware/cors";
-import { adaptiveLoggerMiddleware } from "./middleware/logger";
-import { ApiResponse } from "./types";
+import { Hono } from 'hono';
+import { corsMiddleware } from './middleware/cors';
+import { adaptiveLoggerMiddleware } from './middleware/logger';
+import { ApiResponse } from './types';
 
 // Import routes
-import notificationsRoutes from "./routes/notifications";
-import aiRoutes from "./routes/ai";
+import notificationsRoutes from './routes/notifications';
+import aiRoutes from './routes/ai';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 // Apply logging middleware first (captures all requests)
-app.use("*", adaptiveLoggerMiddleware);
+app.use('*', adaptiveLoggerMiddleware);
 
 // Apply CORS middleware globally
-app.use("*", corsMiddleware);
+app.use('*', corsMiddleware);
 
 // Health check endpoint
-app.get("/health", (c) => {
-  const response: ApiResponse<{ 
-    status: string; 
-    timestamp: string; 
+app.get('/health', c => {
+  const response: ApiResponse<{
+    status: string;
+    timestamp: string;
     version: string;
     services: string[];
   }> = {
     success: true,
     data: {
-      status: "ok",
+      status: 'ok',
       timestamp: new Date().toISOString(),
-      version: "1.0.0",
-      services: ["notifications", "ai", "database"],
-    },
+      version: '1.0.0',
+      services: ['notifications', 'ai', 'database']
+    }
   };
   return c.json(response);
 });
 
 // API info endpoint
-app.get("/", (c) => {
+app.get('/', c => {
   const response: ApiResponse<{
     name: string;
     description: string;
@@ -44,60 +44,57 @@ app.get("/", (c) => {
   }> = {
     success: true,
     data: {
-      name: "Negra Mídia Notify API",
-      description: "API para gerenciamento de notificações com IA integrada",
-      version: "1.0.0",
+      name: 'Negra Mídia Notify API',
+      description: 'API para gerenciamento de notificações com IA integrada',
+      version: '1.0.0',
       endpoints: {
         notifications: [
-          "GET /notifications - Listar notificações",
-          "GET /notifications/:id - Buscar por ID",
-          "POST /notifications - Criar notificação",
-          "PUT /notifications/:id/read - Marcar como lida",
-          "GET /notifications/paginate - Buscar notificações com paginação e filtro"
+          'GET /notifications - Listar notificações',
+          'GET /notifications/:id - Buscar por ID',
+          'POST /notifications - Criar notificação',
+          'PUT /notifications/:id/read - Marcar como lida',
+          'GET /notifications/paginate - Buscar notificações com paginação e filtro'
         ],
         ai: [
-          "POST /ai/generate - Geração livre de texto",
-          "POST /ai/generate-notification - Gerar notificação",
-          "POST /ai/summarize-notifications - Resumir notificações",
-          "GET /ai/models - Listar modelos disponíveis"
+          'POST /ai/generate - Geração livre de texto',
+          'POST /ai/generate-notification - Gerar notificação',
+          'POST /ai/summarize-notifications - Resumir notificações',
+          'GET /ai/models - Listar modelos disponíveis'
         ],
-        system: [
-          "GET /health - Status da API",
-          "GET / - Informações da API"
-        ],
+        system: ['GET /health - Status da API', 'GET / - Informações da API'],
         features: [
-          "Logging automático (desenvolvimento)",
-          "CORS dinâmico",
-          "IA integrada via gateway",
-          "Banco D1 via Prisma ORM",
-          "Timezone Brasil (UTC-3)"
+          'Logging automático (desenvolvimento)',
+          'CORS dinâmico',
+          'IA integrada via gateway',
+          'Banco D1 via Prisma ORM',
+          'Timezone Brasil (UTC-3)'
         ]
       }
-    },
+    }
   };
   return c.json(response);
 });
 
 // Mount routes
-app.route("/notifications", notificationsRoutes);
-app.route("/ai", aiRoutes);
+app.route('/notifications', notificationsRoutes);
+app.route('/ai', aiRoutes);
 
 // 404 handler
-app.notFound((c) => {
+app.notFound(c => {
   const response: ApiResponse<never> = {
     success: false,
-    error: "Endpoint não encontrado",
+    error: 'Endpoint não encontrado'
   };
   return c.json(response, 404);
 });
 
 // Error handler
 app.onError((error, c) => {
-  console.error("Erro não tratado:", error);
-  
+  console.error('Erro não tratado:', error);
+
   const response: ApiResponse<never> = {
     success: false,
-    error: "Erro interno do servidor",
+    error: 'Erro interno do servidor'
   };
   return c.json(response, 500);
 });

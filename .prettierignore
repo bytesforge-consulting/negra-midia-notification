@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.wrangler/
+worker-configuration.d.ts
+prisma/migrations/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+.dev.vars
