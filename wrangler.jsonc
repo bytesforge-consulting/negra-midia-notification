@@ -22,36 +22,13 @@
 		{
 			"binding": "DB",
 			"database_name": "negra-midia-db",
-			"database_id": "b0cf9329-4048-473c-bebe-d7f8248b4ebd"
+			"database_id": "${D1_DATABASE_ID}"
 		}
 	],
 	/**
-	 * Environment Variables - Configurações CORS
-	 * Todas as configurações vêm diretamente das variáveis de ambiente
-	 */
-	"vars": {
-		// Origens permitidas (separadas por vírgula, use * para todas)
-		"ALLOWED_ORIGINS": "http://localhost:4200,http://localhost:3000,https://negramidia.com,https://*.negramidia.com",
-		
-		// Permitir credenciais (cookies, auth headers)
-		"CORS_CREDENTIALS": "true",
-		
-		// Cache do preflight em segundos
-		"CORS_MAX_AGE": "86400",
-		
-		// Métodos HTTP permitidos
-		"CORS_METHODS": "GET,POST,PUT,DELETE,OPTIONS,PATCH",
-		
-		// Headers permitidos
-		"CORS_HEADERS": "Content-Type,Authorization,X-Requested-With,X-API-Key,Accept",
-		
-		// Ambiente (development, staging, production)
-		"ENVIRONMENT": "development"
-	},
-	/**
-	 * Workers AI (nativo da Cloudflare)
+	 * Workers AI
 	 * https://developers.cloudflare.com/workers-ai/
-	 * Não precisa de gateway ou chaves de API
+	 * Gateway será especificado em cada requisição conforme documentação oficial
 	 */
 	"ai": {
 		"binding": "AI"

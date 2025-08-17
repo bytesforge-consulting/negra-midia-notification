@@ -1,13 +1,28 @@
 import { cors } from "hono/cors";
 import type { Context, Next } from "hono";
 
-// Configurações padrão de CORS
+// Configurações padrão de CORS (fallback se não definidas na plataforma)
 const DEFAULT_CORS_CONFIG = {
-  ALLOWED_ORIGINS: '*',
+  ALLOWED_ORIGINS: '*', // Desenvolvimento
   CORS_CREDENTIALS: 'false',
   CORS_MAX_AGE: '86400',
   CORS_METHODS: 'GET,POST,PUT,DELETE,OPTIONS',
   CORS_HEADERS: 'Content-Type,Authorization,X-Requested-With,X-API-Key'
+};
+
+// Log de origem das configurações (para debug)
+const logConfigSource = (env: CloudflareBindings) => {
+  const sources: string[] = [];
+  
+  if (env.ALLOWED_ORIGINS && env.ALLOWED_ORIGINS !== DEFAULT_CORS_CONFIG.ALLOWED_ORIGINS) {
+    sources.push('ALLOWED_ORIGINS: Plataforma');
+  } else {
+    sources.push('ALLOWED_ORIGINS: wrangler.jsonc');
+  }
+  
+  if (env.ENVIRONMENT === 'development') {
+    console.log('🔧 CORS Sources:', sources.join(', '));
+  }
 };
 
 // Função para obter configuração de ambiente com fallbacks
@@ -45,12 +60,14 @@ const isOriginAllowed = (origin: string | undefined, allowedOrigins: string): bo
 export const corsMiddleware = async (c: Context, next: Next) => {
   const config = getEnvConfig(c.env);
   
-  // Log das configurações em desenvolvimento
+  // Log das configurações e suas origens em desenvolvimento
   if (c.env.ENVIRONMENT === 'development') {
+    logConfigSource(c.env);
     console.log('🔧 CORS Config:', {
       origins: config.allowedOrigins,
       credentials: config.credentials,
-      maxAge: config.maxAge
+      maxAge: config.maxAge,
+      environment: c.env.ENVIRONMENT || 'not-set'
     });
   }
 

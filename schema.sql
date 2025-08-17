@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     phone TEXT NOT NULL,
     body TEXT NOT NULL,
     subject TEXT NOT NULL,
-    sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at DATETIME NOT NULL,
     read_at DATETIME NULL
 );
 

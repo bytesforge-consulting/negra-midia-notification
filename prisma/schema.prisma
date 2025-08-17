@@ -1,0 +1,30 @@
+// Prisma schema para Cloudflare D1 Database
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo de notificações - baseado na estrutura SQL existente
+model Notification {
+  id      Int       @id @default(autoincrement())
+  name    String    // Nome do remetente
+  email   String    // Email do remetente  
+  phone   String    // Telefone do remetente
+  body    String    // Conteúdo da notificação
+  subject String    // Assunto da notificação
+  sent_at DateTime  // Data de envio (definida manualmente no código)
+  read_at DateTime? // Data de leitura (nullable)
+
+  // Índices para melhorar performance (matching schema.sql)
+  @@index([sent_at], name: "idx_notifications_sent_at")
+  @@index([email], name: "idx_notifications_email") 
+  @@index([read_at], name: "idx_notifications_read_at")
+  @@map("notifications")
+}

@@ -8,19 +8,34 @@
 		"url": "https://github.com/bytesforge-consulting/negra-midia-notification"
 	},
 	"homepage": "https://github.com/bytesforge-consulting/negra-midia-notification#readme",
-	"keywords": ["cloudflare", "workers", "d1", "ai", "notifications", "negra-midia"],
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"d1",
+		"ai",
+		"notifications",
+		"negra-midia"
+	],
 	"scripts": {
 		"dev": "wrangler dev --local",
 		"dev:remote": "wrangler dev",
 		"deploy": "wrangler deploy --minify",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"d1:local": "wrangler d1 execute DB --local",
-		"d1:setup": "wrangler d1 execute DB --local --file=./schema.sql"
+		"d1:setup": "wrangler d1 execute DB --local --file=./schema.sql",
+		"prisma:generate": "prisma generate",
+		"prisma:push": "prisma db push",
+		"prisma:studio": "prisma studio"
 	},
 	"dependencies": {
+		"@prisma/adapter-d1": "^6.0.0",
+		"@prisma/client": "^6.0.0",
+		"@types/date-fns": "^2.5.3",
+		"date-fns-tz": "^2.0.1",
 		"hono": "^4.9.2"
 	},
 	"devDependencies": {
+		"prisma": "^6.0.0",
 		"wrangler": "^4.30.0"
 	}
 }

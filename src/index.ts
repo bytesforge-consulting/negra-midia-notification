@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { corsMiddleware } from "./middleware/cors";
+import { adaptiveLoggerMiddleware } from "./middleware/logger";
 import { ApiResponse } from "./types";
 
 // Import routes
@@ -7,6 +8,9 @@ import notificationsRoutes from "./routes/notifications";
 import aiRoutes from "./routes/ai";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
+
+// Apply logging middleware first (captures all requests)
+app.use("*", adaptiveLoggerMiddleware);
 
 // Apply CORS middleware globally
 app.use("*", corsMiddleware);
@@ -48,7 +52,8 @@ app.get("/", (c) => {
           "GET /notifications - Listar notificações",
           "GET /notifications/:id - Buscar por ID",
           "POST /notifications - Criar notificação",
-          "PUT /notifications/:id/read - Marcar como lida"
+          "PUT /notifications/:id/read - Marcar como lida",
+          "GET /notifications/paginate - Buscar notificações com paginação e filtro"
         ],
         ai: [
           "POST /ai/generate - Geração livre de texto",
@@ -59,6 +64,13 @@ app.get("/", (c) => {
         system: [
           "GET /health - Status da API",
           "GET / - Informações da API"
+        ],
+        features: [
+          "Logging automático (desenvolvimento)",
+          "CORS dinâmico",
+          "IA integrada via gateway",
+          "Banco D1 via Prisma ORM",
+          "Timezone Brasil (UTC-3)"
         ]
       }
     },

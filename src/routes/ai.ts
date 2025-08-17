@@ -4,10 +4,18 @@ import {
   AIGenerateResponse,
   NotificationGenerateRequest,
   NotificationSummarizeRequest,
+  ProcessUnreadRequest,
+  ProcessUnreadResponse,
+  DailyDigestResponse,
   AppNotification,
   ApiResponse,
-  ChatMessage
+  ChatMessage,
+  mapPrismaToApi,
+  mapPrismaArrayToApi,
+  getBrazilReadTime,
+  getBrazilTimeAsUTC,
 } from "../types";
+import { getPrismaFromContext } from "../services/database";
 
 const ai = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -34,11 +42,15 @@ ai.post("/generate", async (c) => {
     };
 
     // Chamar IA via gateway
-    const aiResponse = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+    const aiResponse = (await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
       messages: aiRequest.messages,
       max_tokens: aiRequest.max_tokens,
       temperature: aiRequest.temperature,
-    }) as any;
+    }, {
+      gateway: {
+        id: c.env.AI_GATEWAY_NAME,
+      },
+    })) as any;
 
     const response: AIGenerateResponse = {
       success: true,
@@ -52,156 +64,9 @@ ai.post("/generate", async (c) => {
   } catch (error) {
     const response: AIGenerateResponse = {
       success: false,
-      error: `Erro ao gerar resposta: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
-    };
-    return c.json(response, 500);
-  }
-});
-
-// POST /ai/generate-notification - Gerar notificação usando IA
-ai.post("/generate-notification", async (c) => {
-  try {
-    const request = await c.req.json<NotificationGenerateRequest>();
-
-    // Validação
-    if (!request.context) {
-      const response: ApiResponse<never> = {
-        success: false,
-        error: "Contexto é obrigatório para gerar notificação",
-      };
-      return c.json(response, 400);
-    }
-
-    const tone = request.tone || "friendly";
-    const language = request.language || "pt-BR";
-    const type = request.type || "email";
-
-    // Prompt customizado para gerar notificações
-    const systemPrompt = `Você é um assistente especializado em criar notificações ${type} profissionais.
-    
-Diretrizes:
-- Tom: ${tone}
-- Idioma: ${language}
-- Tipo: ${type}
-- Seja conciso e claro
-- Use formatação adequada
-- Para email: inclua assunto e corpo
-- Para SMS: máximo 160 caracteres
-- Para push: máximo 50 caracteres no título e 100 no corpo
-
-Retorne apenas o conteúdo da notificação no seguinte formato JSON:
-{
-  "subject": "assunto aqui (para email)",
-  "body": "corpo da mensagem aqui"
-}`;
-
-    const messages: ChatMessage[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Contexto: ${request.context}` }
-    ];
-
-    // Chamar IA
-    const aiResponse = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-      messages,
-      max_tokens: 500,
-      temperature: 0.3,
-    }) as any;
-
-    let notificationContent;
-    try {
-      notificationContent = JSON.parse(aiResponse.response || "{}");
-    } catch {
-      // Se não conseguir parsear JSON, criar estrutura manual
-      notificationContent = {
-        subject: type === "sms" ? "" : "Notificação Importante",
-        body: aiResponse.response || "Erro ao gerar conteúdo",
-      };
-    }
-
-    const response: ApiResponse<typeof notificationContent> = {
-      success: true,
-      data: notificationContent,
-    };
-
-    return c.json(response);
-  } catch (error) {
-    const response: ApiResponse<never> = {
-      success: false,
-      error: `Erro ao gerar notificação: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
-    };
-    return c.json(response, 500);
-  }
-});
-
-// POST /ai/summarize-notifications - Resumir notificações usando IA
-ai.post("/summarize-notifications", async (c) => {
-  try {
-    const request = await c.req.json<NotificationSummarizeRequest>();
-
-    // Validação
-    if (!request.notifications || request.notifications.length === 0) {
-      const response: ApiResponse<never> = {
-        success: false,
-        error: "É necessário fornecer pelo menos uma notificação para resumir",
-      };
-      return c.json(response, 400);
-    }
-
-    const timeframe = request.timeframe || "today";
-
-    // Preparar dados das notificações
-    const notificationsData = request.notifications.map(n => ({
-      assunto: n.subject,
-      remetente: n.name,
-      email: n.email,
-      enviado_em: n.sent_at,
-      lido_em: n.read_at,
-      corpo: n.body.substring(0, 200) // Limitar tamanho do corpo
-    }));
-
-    const systemPrompt = `Você é um assistente que cria resumos executivos de notificações.
-
-Analise as notificações fornecidas e crie um resumo executivo incluindo:
-1. Número total de notificações
-2. Principais remetentes
-3. Assuntos mais comuns
-4. Taxa de abertura
-5. Tendências importantes
-6. Ações recomendadas
-
-Seja conciso e focado em insights úteis para gestão.`;
-
-    const userPrompt = `Resumir notificações do período: ${timeframe}
-
-Dados das notificações:
-${JSON.stringify(notificationsData, null, 2)}`;
-
-    const messages: ChatMessage[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
-    ];
-
-    // Chamar IA
-    const aiResponse = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-      messages,
-      max_tokens: 800,
-      temperature: 0.5,
-    }) as any;
-
-    const response: ApiResponse<{ summary: string; timeframe: string; total_notifications: number }> = {
-      success: true,
-      data: {
-        summary: aiResponse.response || "Não foi possível gerar resumo",
-        timeframe,
-        total_notifications: request.notifications.length,
-      },
-    };
-
-    return c.json(response);
-  } catch (error) {
-    const response: ApiResponse<never> = {
-      success: false,
-      error: `Erro ao resumir notificações: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+      error: `Erro ao gerar resposta: ${
+        error instanceof Error ? error.message : "Erro desconhecido"
+      }`,
     };
     return c.json(response, 500);
   }
@@ -215,20 +80,20 @@ ai.get("/models", async (c) => {
         id: "@cf/meta/llama-3.1-8b-instruct",
         name: "Llama 3.1 8B Instruct",
         description: "Modelo de conversação geral",
-        type: "chat"
+        type: "chat",
       },
       {
         id: "@cf/microsoft/phi-2",
         name: "Phi-2",
         description: "Modelo compacto e eficiente",
-        type: "chat"
+        type: "chat",
       },
       {
         id: "@cf/mistral/mistral-7b-instruct-v0.1",
         name: "Mistral 7B Instruct",
         description: "Modelo multilíngue",
-        type: "chat"
-      }
+        type: "chat",
+      },
     ];
 
     const response: ApiResponse<typeof availableModels> = {
@@ -240,7 +105,344 @@ ai.get("/models", async (c) => {
   } catch (error) {
     const response: ApiResponse<never> = {
       success: false,
-      error: `Erro ao listar modelos: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+      error: `Erro ao listar modelos: ${
+        error instanceof Error ? error.message : "Erro desconhecido"
+      }`,
+    };
+    return c.json(response, 500);
+  }
+});
+
+// Função `mapRowToNotification` removida - agora usamos `mapPrismaToApi` do types.ts
+
+// POST /ai/process-unread - Processar notificações não lidas com IA
+ai.post("/process-unread", async (c) => {
+  try {
+    const request = await c.req.json<ProcessUnreadRequest>();
+    const markAsRead = request.mark_as_read !== false; // default true
+    const maxNotifications = request.max_notifications || 50;
+
+    // Buscar notificações não lidas (usando Prisma)
+    const prisma = getPrismaFromContext(c);
+    const unreadNotifications = await prisma.notification.findMany({
+      where: {
+        read_at: null
+      },
+      orderBy: {
+        sent_at: 'desc'
+      },
+      take: maxNotifications
+    });
+
+    if (unreadNotifications.length === 0) {
+      const response: ProcessUnreadResponse = {
+        success: true,
+        data: {
+          summary: "Nenhuma notificação não lida encontrada.",
+          notifications_processed: [],
+          total_unread: 0,
+          marked_as_read: 0,
+          insights: {
+            most_common_senders: [],
+            urgent_count: 0,
+            categories: {}
+          }
+        }
+      };
+      return c.json(response);
+    }
+
+    // Converter para formato da API
+    const unreadApiNotifications = mapPrismaArrayToApi(unreadNotifications);
+
+    // Gerar insights
+    const senderCount: Record<string, number> = {};
+    const categoryCount: Record<string, number> = {};
+    let urgentCount = 0;
+
+    unreadApiNotifications.forEach(notification => {
+      // Contar remetentes
+      senderCount[notification.name] = (senderCount[notification.name] || 0) + 1;
+      
+      // Detectar urgência (palavras-chave no assunto)
+      const urgentKeywords = ['urgente', 'importante', 'emergência', 'crítico', 'ação'];
+      if (urgentKeywords.some(keyword => 
+        notification.subject.toLowerCase().includes(keyword) ||
+        notification.body.toLowerCase().includes(keyword)
+      )) {
+        urgentCount++;
+      }
+
+      // Categorizar por tipo (simples heurística)
+      if (notification.subject.toLowerCase().includes('pedido') || 
+          notification.body.toLowerCase().includes('compra')) {
+        categoryCount['Vendas'] = (categoryCount['Vendas'] || 0) + 1;
+      } else if (notification.subject.toLowerCase().includes('suporte') ||
+                 notification.body.toLowerCase().includes('problema')) {
+        categoryCount['Suporte'] = (categoryCount['Suporte'] || 0) + 1;
+      } else {
+        categoryCount['Geral'] = (categoryCount['Geral'] || 0) + 1;
+      }
+    });
+
+    // Preparar dados para IA
+    const notificationsSummary = unreadNotifications.map((n: any) => ({
+      remetente: n.name,
+      assunto: n.subject,
+      corpo: n.body.substring(0, 200) + '...',
+      data: n.sent_at.toISOString().split('T')[0]
+    }));
+
+    const systemPrompt = `Você é um assistente de análise de notificações para a plataforma Negra Mídia.
+
+Analise as notificações não lidas e forneça um resumo executivo incluindo:
+
+1. **Resumo Geral**: Panorama das ${unreadNotifications.length} notificações não lidas
+2. **Prioridades**: Destaque notificações que requerem ação imediata
+3. **Tendências**: Padrões identificados nos tipos de mensagem
+4. **Recomendações**: Ações sugeridas para o usuário
+5. **Próximos Passos**: O que deve ser feito primeiro
+
+Seja conciso, focado em insights úteis e mantenha tom profissional mas amigável.`;
+
+    const userPrompt = `Notificações não lidas (${unreadNotifications.length} total):
+
+${JSON.stringify(notificationsSummary, null, 2)}
+
+Estatísticas:
+- Total: ${unreadNotifications.length}
+- Urgentes: ${urgentCount}
+- Principais remetentes: ${Object.entries(senderCount).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, count]) => `${name} (${count})`).join(', ')}
+- Categorias: ${Object.entries(categoryCount).map(([cat, count]) => `${cat}: ${count}`).join(', ')}`;
+
+    const messages: ChatMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ];
+
+    // Chamar IA
+    const aiResponse = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      messages,
+      max_tokens: 800,
+      temperature: 0.7,
+    }, {
+      gateway: {
+        id: c.env.AI_GATEWAY_NAME,
+      },
+    }) as any;
+
+    // Marcar como lidas se solicitado (usando Prisma)
+    let markedAsRead = 0;
+    if (markAsRead) {
+      const ids = unreadNotifications.map((n: any) => n.id).filter(Boolean);
+      if (ids.length > 0) {
+        const updateResult = await prisma.notification.updateMany({
+          where: {
+            id: { in: ids }
+          },
+          data: {
+            read_at: getBrazilReadTime() // 🇧🇷 Hora local do Brasil
+          }
+        });
+        
+        markedAsRead = updateResult.count || 0;
+      }
+
+      // Atualizar read_at nas notificações retornadas (hora do Brasil 🇧🇷)
+      unreadApiNotifications.forEach(notification => {
+        notification.read_at = getBrazilTimeAsUTC();
+      });
+    }
+
+    const response: ProcessUnreadResponse = {
+      success: true,
+      data: {
+        summary: aiResponse.response || "Não foi possível gerar resumo",
+        notifications_processed: unreadApiNotifications,
+        total_unread: unreadApiNotifications.length,
+        marked_as_read: markedAsRead,
+        insights: {
+          most_common_senders: Object.entries(senderCount)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([name]) => name),
+          urgent_count: urgentCount,
+          categories: categoryCount
+        }
+      }
+    };
+
+    return c.json(response);
+  } catch (error) {
+    const response: ProcessUnreadResponse = {
+      success: false,
+      error: `Erro ao processar notificações: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+    };
+    return c.json(response, 500);
+  }
+});
+
+// POST /ai/analyze-unread - Analisar notificações não lidas SEM marcar como lidas
+ai.post("/analyze-unread", async (c) => {
+  try {
+    const request = await c.req.json<ProcessUnreadRequest>();
+    // Forçar mark_as_read = false para apenas análise
+    request.mark_as_read = false;
+
+    // Reutilizar a lógica do process-unread
+    return ai.fetch(new Request(c.req.url.replace('/analyze-unread', '/process-unread'), {
+      method: 'POST',
+      headers: c.req.raw.headers,
+      body: JSON.stringify(request)
+    }), c.env);
+  } catch (error) {
+    const response: ProcessUnreadResponse = {
+      success: false,
+      error: `Erro ao analisar notificações: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+    };
+    return c.json(response, 500);
+  }
+});
+
+// GET /ai/daily-digest - Resumo diário das notificações (usando Prisma)
+ai.get("/daily-digest", async (c) => {
+  try {
+    const prisma = getPrismaFromContext(c);
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+
+    // Buscar notificações do dia
+    const todayPrismaNotifications = await prisma.notification.findMany({
+      where: {
+        sent_at: {
+          gte: startOfDay,
+          lt: endOfDay
+        }
+      },
+      orderBy: {
+        sent_at: 'desc'
+      }
+    });
+
+    // Buscar não lidas
+    const unreadPrismaNotifications = await prisma.notification.findMany({
+      where: {
+        read_at: null
+      },
+      orderBy: {
+        sent_at: 'desc'
+      },
+      take: 20
+    });
+
+    const todayNotifications = mapPrismaArrayToApi(todayPrismaNotifications);
+    const unreadNotifications = mapPrismaArrayToApi(unreadPrismaNotifications);
+
+    // Identificar urgentes
+    const urgentNotifications = unreadNotifications.filter(n => {
+      const urgentKeywords = ['urgente', 'importante', 'emergência', 'crítico'];
+      return urgentKeywords.some(keyword => 
+        n.subject.toLowerCase().includes(keyword) ||
+        n.body.toLowerCase().includes(keyword)
+      );
+    });
+
+    // Top senders
+    const senderCount: Record<string, number> = {};
+    unreadNotifications.forEach(n => {
+      senderCount[n.name] = (senderCount[n.name] || 0) + 1;
+    });
+    const topSenders = Object.entries(senderCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name]) => name);
+
+    // Gerar digest com IA
+    const systemPrompt = `Você é um assistente que cria resumos diários executivos para a plataforma Negra Mídia.
+
+Crie um digest diário profissional e conciso incluindo:
+
+1. **Visão Geral do Dia**: Resumo das atividades
+2. **Pendências Importantes**: Notificações não lidas que precisam de atenção
+3. **Métricas do Dia**: Números relevantes
+4. **Ações Recomendadas**: Próximos passos prioritários
+
+Mantenha tom profissional mas acessível.`;
+
+    const userPrompt = `Digest diário para ${today}:
+
+📊 MÉTRICAS:
+- Notificações hoje: ${todayNotifications.length}
+- Não lidas total: ${unreadNotifications.length}
+- Urgentes: ${urgentNotifications.length}
+
+👥 PRINCIPAIS REMETENTES:
+${topSenders.slice(0, 3).join(', ')}
+
+🚨 NOTIFICAÇÕES URGENTES:
+${urgentNotifications.slice(0, 3).map(n => `- ${n.name}: ${n.subject}`).join('\n')}
+
+📋 ÚLTIMAS NÃO LIDAS:
+${unreadNotifications.slice(0, 5).map(n => `- ${n.name}: ${n.subject}`).join('\n')}`;
+
+    const messages: ChatMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ];
+
+    const aiResponse = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      messages,
+      max_tokens: 600,
+      temperature: 0.6,
+    }, {
+      gateway: {
+        id: c.env.AI_GATEWAY_NAME,
+      },
+    }) as any;
+
+    // Marcar notificações urgentes como processadas (lidas) - usando Prisma
+    if (urgentNotifications.length > 0) {
+      const urgentIds = unreadPrismaNotifications
+        .filter((row: any) => urgentNotifications.some(urgent => urgent.name === row.name && urgent.subject === row.subject))
+        .map((row: any) => row.id)
+        .filter(Boolean);
+
+      if (urgentIds.length > 0) {
+        await prisma.notification.updateMany({
+          where: {
+            id: { in: urgentIds }
+          },
+          data: {
+            read_at: getBrazilReadTime() // 🇧🇷 Hora local do Brasil
+          }
+        });
+
+        // Atualizar as notificações urgentes (hora do Brasil 🇧🇷)
+        urgentNotifications.forEach(notification => {
+          notification.read_at = getBrazilTimeAsUTC();
+        });
+      }
+    }
+
+    const response: DailyDigestResponse = {
+      success: true,
+      data: {
+        digest: aiResponse.response || "Não foi possível gerar digest",
+        date: today.toISOString().split('T')[0],
+        total_notifications: todayNotifications.length,
+        unread_count: unreadNotifications.length,
+        top_senders: topSenders,
+        urgent_notifications: urgentNotifications,
+        processed_notifications: urgentNotifications // Urgentes foram marcadas como lidas
+      }
+    };
+
+    return c.json(response);
+  } catch (error) {
+    const response: DailyDigestResponse = {
+      success: false,
+      error: `Erro ao gerar digest diário: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
     };
     return c.json(response, 500);
   }
