@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { corsMiddleware } from './middleware/cors';
 import { adaptiveLoggerMiddleware } from './middleware/logger';
 import { ApiResponse } from './types';
+import { scheduledHandler } from './handlers/scheduled';
 
 // Import routes
 import notificationsRoutes from './routes/notifications';
@@ -62,12 +63,18 @@ app.get('/', c => {
           'GET /ai/models - Listar modelos disponíveis'
         ],
         system: ['GET /health - Status da API', 'GET / - Informações da API'],
+        cron: [
+          'Diário às 0h Brasil (3h UTC) - Digest diário com IA',
+          'Semanal às segundas 0h Brasil (3h UTC) - Digest semanal e limpeza',
+          'Mensal dia 1 às 0h Brasil (3h UTC) - Digest mensal e auditoria'
+        ],
         features: [
           'Logging automático (desenvolvimento)',
           'CORS dinâmico',
           'IA integrada via gateway',
           'Banco D1 via Prisma ORM',
-          'Timezone Brasil (UTC-3)'
+          'Timezone Brasil (UTC-3)',
+          'Cron jobs automáticos'
         ]
       }
     }
@@ -94,9 +101,12 @@ app.onError((error, c) => {
 
   const response: ApiResponse<never> = {
     success: false,
-    error: 'Erro interno do servidor'
+    error: JSON.stringify(error)
   };
   return c.json(response, 500);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  scheduled: scheduledHandler
+};

@@ -12,6 +12,7 @@ import {
   getBrazilTimeAsUTC
 } from '../types';
 import { getPrismaFromContext } from '../services/database';
+import { DigestPeriod } from '../services/digest';
 
 const ai = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -328,150 +329,23 @@ ai.post('/analyze-unread', async c => {
 ai.get('/daily-digest', async c => {
   try {
     const prisma = getPrismaFromContext(c);
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+    const { createDigestService } = await import('../services/digest');
+    const digestService = createDigestService(prisma, c.env);
 
-    // Buscar notificações do dia
-    const todayPrismaNotifications = await prisma.notification.findMany({
-      where: {
-        sent_at: {
-          gte: startOfDay,
-          lt: endOfDay
-        }
-      },
-      orderBy: {
-        sent_at: 'desc'
-      }
-    });
-
-    // Buscar não lidas
-    const unreadPrismaNotifications = await prisma.notification.findMany({
-      where: {
-        read_at: null
-      },
-      orderBy: {
-        sent_at: 'desc'
-      },
-      take: 20
-    });
-
-    const todayNotifications = mapPrismaArrayToApi(todayPrismaNotifications);
-    const unreadNotifications = mapPrismaArrayToApi(unreadPrismaNotifications);
-
-    // Identificar urgentes
-    const urgentNotifications = unreadNotifications.filter(n => {
-      const urgentKeywords = ['urgente', 'importante', 'emergência', 'crítico'];
-      return urgentKeywords.some(
-        keyword =>
-          n.subject.toLowerCase().includes(keyword) || n.body.toLowerCase().includes(keyword)
-      );
-    });
-
-    // Top senders
-    const senderCount: Record<string, number> = {};
-    unreadNotifications.forEach(n => {
-      senderCount[n.name] = (senderCount[n.name] || 0) + 1;
-    });
-    const topSenders = Object.entries(senderCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name]) => name);
-
-    // Gerar digest com IA
-    const systemPrompt = `Você é um assistente que cria resumos diários executivos para a plataforma Negra Mídia.
-
-Crie um digest diário profissional e conciso incluindo:
-
-1. **Visão Geral do Dia**: Resumo das atividades
-2. **Pendências Importantes**: Notificações não lidas que precisam de atenção
-3. **Métricas do Dia**: Números relevantes
-4. **Ações Recomendadas**: Próximos passos prioritários
-
-Mantenha tom profissional mas acessível.`;
-
-    const userPrompt = `Digest diário para ${today}:
-
-📊 MÉTRICAS:
-- Notificações hoje: ${todayNotifications.length}
-- Não lidas total: ${unreadNotifications.length}
-- Urgentes: ${urgentNotifications.length}
-
-👥 PRINCIPAIS REMETENTES:
-${topSenders.slice(0, 3).join(', ')}
-
-🚨 NOTIFICAÇÕES URGENTES:
-${urgentNotifications
-  .slice(0, 3)
-  .map(n => `- ${n.name}: ${n.subject}`)
-  .join('\n')}
-
-📋 ÚLTIMAS NÃO LIDAS:
-${unreadNotifications
-  .slice(0, 5)
-  .map(n => `- ${n.name}: ${n.subject}`)
-  .join('\n')}`;
-
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt }
-    ];
-
-    const aiResponse = (await c.env.AI.run(
-      '@cf/meta/llama-3.1-8b-instruct',
-      {
-        messages,
-        max_tokens: 600,
-        temperature: 0.6
-      },
-      {
-        gateway: {
-          id: c.env.AI_GATEWAY_NAME
-        }
-      }
-    )) as any;
-
-    // Marcar notificações urgentes como processadas (lidas) - usando Prisma
-    if (urgentNotifications.length > 0) {
-      const urgentIds = unreadPrismaNotifications
-        .filter((row: any) =>
-          urgentNotifications.some(
-            urgent => urgent.name === row.name && urgent.subject === row.subject
-          )
-        )
-        .map((row: any) => row.id)
-        .filter(Boolean);
-
-      if (urgentIds.length > 0) {
-        await prisma.notification.updateMany({
-          where: {
-            id: { in: urgentIds }
-          },
-          data: {
-            read_at: getBrazilReadTime() // 🇧🇷 Hora local do Brasil
-          }
-        });
-
-        // Atualizar as notificações urgentes (hora do Brasil 🇧🇷)
-        urgentNotifications.forEach(notification => {
-          notification.read_at = getBrazilTimeAsUTC();
-        });
-      }
-    }
-
+    // Usar o DigestService para manter consistência com os cron jobs
+    const digestResult = await digestService.generateDigest(DigestPeriod.DAILY, true);
     const response: DailyDigestResponse = {
       success: true,
       data: {
-        digest: aiResponse.response || 'Não foi possível gerar digest',
-        date: today.toISOString().split('T')[0],
-        total_notifications: todayNotifications.length,
-        unread_count: unreadNotifications.length,
-        top_senders: topSenders,
-        urgent_notifications: urgentNotifications,
-        processed_notifications: urgentNotifications // Urgentes foram marcadas como lidas
+        digest: digestResult.data!.digest,
+        date: digestResult.data!.start_date,
+        total_notifications: digestResult.data!.total_notifications,
+        unread_count: digestResult.data!.unread_count,
+        top_senders: digestResult.data!.top_senders,
+        urgent_notifications: digestResult.data!.urgent_notifications,
+        processed_notifications: digestResult.data!.processed_notifications
       }
     };
-
     return c.json(response);
   } catch (error) {
     const response: DailyDigestResponse = {

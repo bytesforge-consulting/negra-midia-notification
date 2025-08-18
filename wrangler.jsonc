@@ -32,6 +32,18 @@
    */
   "ai": {
     "binding": "AI"
+  },
+  /**
+   * Cron Triggers
+   * https://developers.cloudflare.com/workers/configuration/cron-triggers/
+   * Horários configurados para fuso do Brasil (UTC-3)
+   */
+  "triggers": {
+    "crons": [
+      //   "0 3 * * *", // Diário às 0h Brasil (3h UTC)
+      //   "0 3 * * 1", // Semanal às segundas-feiras 0h Brasil (3h UTC)
+      //   "0 3 1 * *" // Mensal no dia 1 às 0h Brasil (3h UTC)
+    ]
   }
   /**
    * Smart Placement
