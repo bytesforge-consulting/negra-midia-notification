@@ -53,7 +53,7 @@ export async function scheduledHandler(
         break;
 
       default:
-        console.warn(`[CRON] Schedule não reconhecido: ${controller.cron}`);
+        console.warn(`[CRON] Agendamento não reconhecido: ${controller.cron}`);
         break;
     }
 

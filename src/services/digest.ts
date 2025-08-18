@@ -216,6 +216,11 @@ export class DigestService {
         // Último mês
         startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
         break;
+
+      default:
+        // Fallback para diário se período não reconhecido
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
     }
 
     return { startDate, endDate };

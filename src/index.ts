@@ -1,23 +1,34 @@
 import { Hono } from 'hono';
 import { corsMiddleware } from './middleware/cors';
 import { adaptiveLoggerMiddleware } from './middleware/logger';
-import { ApiResponse } from './types';
+import { ApiResponse, getBrazilReadTime } from './types';
 import { scheduledHandler } from './handlers/scheduled';
 
-// Import routes
+// Importar rotas
 import notificationsRoutes from './routes/notifications';
 import aiRoutes from './routes/ai';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
-// Apply logging middleware first (captures all requests)
+// Aplicar middleware de logging primeiro (captura todas as requisições)
 app.use('*', adaptiveLoggerMiddleware);
 
-// Apply CORS middleware globally
+// Aplicar middleware CORS globalmente
 app.use('*', corsMiddleware);
 
-// Health check endpoint
-app.get('/health', c => {
+// Endpoint de debug (remover após teste)
+app.get('/api/debug', c => {
+  return c.json({
+    method: c.req.method,
+    url: c.req.url,
+    path: c.req.path,
+    headers: Object.fromEntries(c.req.raw.headers.entries()),
+    timestamp: getBrazilReadTime().toISOString()
+  });
+});
+
+// Endpoints de verificação de saúde - com e sem prefixo
+app.get('/api/health', c => {
   const response: ApiResponse<{
     status: string;
     timestamp: string;
@@ -35,8 +46,8 @@ app.get('/health', c => {
   return c.json(response);
 });
 
-// API info endpoint
-app.get('/', c => {
+// Endpoints de informações da API - com e sem prefixo
+app.get('/api', c => {
   const response: ApiResponse<{
     name: string;
     description: string;
@@ -58,8 +69,9 @@ app.get('/', c => {
         ],
         ai: [
           'POST /ai/generate - Geração livre de texto',
-          'POST /ai/generate-notification - Gerar notificação',
-          'POST /ai/summarize-notifications - Resumir notificações',
+          'POST /ai/process-unread - Processar notificações não lidas',
+          'POST /ai/analyze-unread - Analisar notificações sem marcar como lidas',
+          'GET /ai/daily-digest - Digest diário com IA',
           'GET /ai/models - Listar modelos disponíveis'
         ],
         system: ['GET /health - Status da API', 'GET / - Informações da API'],
@@ -82,20 +94,20 @@ app.get('/', c => {
   return c.json(response);
 });
 
-// Mount routes
-app.route('/notifications', notificationsRoutes);
-app.route('/ai', aiRoutes);
+// Montar rotas - com e sem prefixo /api para compatibilidade
+app.route('/api/notifications', notificationsRoutes);
+app.route('/api/ai', aiRoutes);
 
-// 404 handler
+// Manipulador 404
 app.notFound(c => {
   const response: ApiResponse<never> = {
     success: false,
-    error: 'Endpoint não encontrado'
+    error: `Requisição ${c.req.method} ${c.req.url} não encontrada`
   };
   return c.json(response, 404);
 });
 
-// Error handler
+// Manipulador de erros
 app.onError((error, c) => {
   console.error('Erro não tratado:', error);
 

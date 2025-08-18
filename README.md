@@ -314,36 +314,127 @@ curl -X POST http://localhost:8787/ai/process-unread \
 
 ## Deploy para Produção
 
-### 1. Configurar Recursos
+### Passo a Passo Completo
+
+#### 1. Criar Banco D1 de Produção
 
 ```bash
-# Criar banco de produção
+# Criar banco D1 remoto
 npx wrangler d1 create negra-midia-db-prod
-npx wrangler d1 execute negra-midia-db-prod --file=./schema.sql
+
+# Exemplo de saída:
+# ✅ Successfully created DB 'negra-midia-db-prod' in region ENAM
+# {
+#   "d1_databases": [
+#     {
+#       "binding": "DB",
+#       "database_id": "28d63604-2c9e-4fef-a4f9-a6753d55dc5a"
+#     }
+#   ]
+# }
+
+# IMPORTANTE: Copie o database_id retornado!
 ```
 
-### 2. Configurar Variáveis
+#### 2. Configurar wrangler.jsonc com ID Real
+
+Atualize o `wrangler.jsonc` com o `database_id` real:
+
+```jsonc
+{
+  "name": "negra-midia-notify-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-08-16",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "negra-midia-db-prod",
+      "database_id": "" // SEU ID AQUI
+    }
+  ],
+
+  "ai": {
+    "binding": "AI"
+  },
+
+  "triggers": {
+    "crons": [
+      "0 3 * * *", // Diário às 0h Brasil
+      "0 3 * * 1", // Semanal às segundas 0h Brasil
+      "0 3 1 * *" // Mensal dia 1 às 0h Brasil
+    ]
+  }
+}
+```
+
+#### 3. Aplicar Schema ao Banco Remoto
 
 ```bash
-# Via CLI (recomendado)
-npx wrangler secret put D1_DATABASE_ID
+# Aplicar schema no banco local (desenvolvimento)
+npx wrangler d1 execute negra-midia-db-prod --file=schema.sql
+
+# Aplicar schema no banco remoto (produção)
+npx wrangler d1 execute negra-midia-db-prod --file=schema.sql --remote
+
+# Verificar se tabelas foram criadas
+npx wrangler d1 execute negra-midia-db-prod --command="SELECT name FROM sqlite_master WHERE type='table';" --remote
+```
+
+#### 4. Configurar Variáveis de Ambiente
+
+```bash
+# Método 1: Via CLI (Secrets para dados sensíveis)
 npx wrangler secret put AI_GATEWAY_ID
+# Digite: seu-gateway-id-aqui
+
+# Environment variables (não sensíveis)
 npx wrangler env put ENVIRONMENT production
-npx wrangler env put ALLOWED_ORIGINS "https://negramidia.com"
+npx wrangler env put ALLOWED_ORIGINS "https://negramidia.com,https://app.negramidia.com"
+npx wrangler env put CORS_CREDENTIALS "true"
 
-# Via Dashboard: Workers & Pages → seu worker → Settings → Environment Variables
+# Método 2: Via Dashboard Cloudflare
+# https://dash.cloudflare.com → Workers & Pages → seu-worker → Settings → Environment Variables
 ```
 
-### 3. Deploy
+#### 5. Deploy Final
 
 ```bash
+# Deploy para produção
 npm run deploy
+
+# Ou manualmente:
+npx wrangler deploy --minify
+
+# Verificar deploy
+curl https://negra-midia-notify-api.workers.dev/health
 ```
 
-### 4. Verificar
+#### 6. Verificações Pós-Deploy
 
 ```bash
+# 1. Health check
 curl https://negra-midia-notify-api.workers.dev/health
+
+# 2. Testar criação de notificação
+curl -X POST https://negra-midia-notify-api.workers.dev/notifications \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Teste Produção",
+    "email": "teste@producao.com",
+    "phone": "11999999999",
+    "subject": "Deploy realizado",
+    "body": "API funcionando em produção!"
+  }'
+
+# 3. Testar IA
+curl -X POST https://negra-midia-notify-api.workers.dev/ai/generate \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "API em produção!"}]}'
+
+# 4. Verificar cron jobs nos logs
+npx wrangler tail | grep CRON
 ```
 
 ## Configuração de Ambientes
@@ -365,6 +456,68 @@ CORS_CREDENTIALS=true
 ```
 
 ## Troubleshooting
+
+### Problemas de Deploy
+
+**"You must use a real database in the database_id configuration"**
+
+```bash
+# Problema: wrangler.jsonc está usando placeholders
+# Solução: Criar banco real e atualizar configuração
+
+# 1. Criar banco de produção
+npx wrangler d1 create negra-midia-db-prod
+
+# 2. Copiar database_id retornado e atualizar wrangler.jsonc
+# 3. Aplicar schema
+npx wrangler d1 execute negra-midia-db-prod --file=schema.sql --remote
+```
+
+**"node_compat field is no longer supported"**
+
+```bash
+# Problema: Wrangler v4 mudou configuração
+# Solução: Atualizar wrangler.jsonc
+
+# Trocar:
+# "node_compat": true
+
+# Por:
+# "compatibility_flags": ["nodejs_compat"]
+```
+
+**"Database not found during deploy"**
+
+```bash
+# Verificar se o banco existe
+npx wrangler d1 list
+
+# Se não existir, criar:
+npx wrangler d1 create negra-midia-db-prod
+
+# Aplicar schema:
+npx wrangler d1 execute negra-midia-db-prod --file=schema.sql --remote
+
+# Verificar tabelas criadas:
+npx wrangler d1 execute negra-midia-db-prod --command="SELECT name FROM sqlite_master WHERE type='table';" --remote
+```
+
+**"Deploy fails with binding errors"**
+
+```bash
+# Limpar cache e regenerar tipos
+rm -rf .wrangler/
+npm run cf-typegen
+
+# Verificar configuração
+npx wrangler whoami
+npx wrangler d1 list
+
+# Deploy com verbose para debug
+npx wrangler deploy --minify --verbose
+```
+
+### Problemas de Desenvolvimento
 
 **"Binding DB not found"**
 
@@ -388,11 +541,107 @@ npx wrangler whoami
 npx wrangler dev --local --port=3000
 ```
 
-**Variáveis não carregam**
+**"Variáveis não carregam"**
 
 ```bash
 # Verificar se .dev.vars está na raiz
 ls -la .dev.vars
+
+# Verificar conteúdo
+cat .dev.vars
+
+# Para desenvolvimento local, usar .dev.vars
+# Para produção, usar Dashboard ou wrangler secrets
+```
+
+### Comandos de Debug
+
+**Verificar configuração atual:**
+
+```bash
+# Ver databases configurados
+npx wrangler d1 list
+
+# Ver workers deployados
+npx wrangler deployments list
+
+# Ver logs em tempo real
+npx wrangler tail
+
+# Ver variáveis configuradas
+npx wrangler secret list
+npx wrangler env list
+```
+
+**Limpar e resetar ambiente:**
+
+```bash
+# Limpar cache completo
+rm -rf .wrangler/
+rm -rf node_modules/.cache/
+
+# Reinstalar e reconfigurar
+npm install
+npm run cf-typegen
+npm run prisma:generate
+
+# Para desenvolvimento
+npm run d1:setup
+npm run dev
+
+# Para produção
+npx wrangler deploy --minify
+```
+
+**Rollback em caso de problema:**
+
+```bash
+# Listar deployments
+npx wrangler deployments list
+
+# Fazer rollback para deployment anterior
+npx wrangler rollback [DEPLOYMENT_ID]
+
+# Exemplo:
+npx wrangler rollback a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6
+```
+
+### Comandos de Monitoramento
+
+**Verificar saúde da aplicação:**
+
+```bash
+# Health check local
+curl http://localhost:8787/health
+
+# Health check produção
+curl https://negra-midia-notify-api.workers.dev/health
+
+# Teste completo local
+curl -X POST http://localhost:8787/notifications \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test","email":"test@test.com","phone":"11999999999","subject":"Test","body":"Test"}'
+
+# Teste completo produção
+curl -X POST https://negra-midia-notify-api.workers.dev/notifications \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test","email":"test@test.com","phone":"11999999999","subject":"Test","body":"Test"}'
+```
+
+**Monitorar logs:**
+
+```bash
+# Logs gerais
+npx wrangler tail
+
+# Logs apenas de erros
+npx wrangler tail --format=pretty --status=error
+
+# Logs de cron jobs
+npx wrangler tail | grep CRON
+
+# Logs com timestamp
+npx wrangler tail --format=pretty
 ```
 
 ## Integração com Frontend

@@ -43,7 +43,7 @@ export const loggerMiddleware = async (c: Context, next: Next) => {
     url: c.req.url,
     userAgent: c.req.header('User-Agent'),
     referer: c.req.header('Referer'),
-    ip: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown',
+    ip: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'desconhecido',
     timestamp
   };
 
@@ -129,18 +129,18 @@ export const loggerMiddleware = async (c: Context, next: Next) => {
  */
 function getStatusText(status: number): string {
   if (status >= 200 && status < 300) {
-    return 'SUCCESS';
+    return 'SUCESSO';
   } // Sucesso
   if (status >= 300 && status < 400) {
-    return 'REDIRECT';
+    return 'REDIRECIONAMENTO';
   } // Redirecionamento
   if (status >= 400 && status < 500) {
-    return 'CLIENT_ERROR';
+    return 'ERRO_CLIENTE';
   } // Erro do cliente
   if (status >= 500) {
-    return 'SERVER_ERROR';
+    return 'ERRO_SERVIDOR';
   } // Erro do servidor
-  return 'UNKNOWN'; // Desconhecido
+  return 'DESCONHECIDO'; // Desconhecido
 }
 
 /**
@@ -157,7 +157,7 @@ export const productionLoggerMiddleware = async (c: Context, next: Next) => {
     console.log(`${c.req.method} ${c.req.url} - ${c.res.status} - ${duration}ms`);
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error(`ERROR ${c.req.method} ${c.req.url} - ${duration}ms:`, error);
+    console.error(`ERRO ${c.req.method} ${c.req.url} - ${duration}ms:`, error);
     throw error;
   }
 };

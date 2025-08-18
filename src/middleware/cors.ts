@@ -19,10 +19,6 @@ const logConfigSource = (env: CloudflareBindings) => {
   } else {
     sources.push('ALLOWED_ORIGINS: wrangler.jsonc');
   }
-
-  if (env.ENVIRONMENT === 'development') {
-    console.log('🔧 CORS Sources:', sources.join(', '));
-  }
 };
 
 // Função para obter configuração de ambiente com fallbacks
@@ -69,7 +65,7 @@ export const corsMiddleware = async (c: Context, next: Next) => {
   // Log das configurações e suas origens em desenvolvimento
   if (c.env.ENVIRONMENT === 'development') {
     logConfigSource(c.env);
-    console.log('🔧 CORS Config:', {
+    console.log('🔧 CORS Configuração:', {
       origins: config.allowedOrigins,
       credentials: config.credentials,
       maxAge: config.maxAge,
