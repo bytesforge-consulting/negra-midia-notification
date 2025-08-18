@@ -4,7 +4,7 @@
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "d1-tutorial",
+  "name": "negra-midia-api",
   "main": "src/index.ts",
   "compatibility_date": "2025-08-16",
   "assets": {
