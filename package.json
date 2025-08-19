@@ -19,7 +19,7 @@
   "scripts": {
     "dev": "wrangler dev --local",
     "dev:cron": "wrangler dev --test-scheduled",
-    "dev:remote": "wrangler dev",
+    "dev:remote": "wrangler dev --remote",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "d1:local": "wrangler d1 execute DB --local",
@@ -37,9 +37,11 @@
   "dependencies": {
     "@prisma/adapter-d1": "^6.0.0",
     "@prisma/client": "^6.0.0",
+    "@react-email/render": "^1.2.0",
     "@types/date-fns": "^2.5.3",
     "date-fns-tz": "^2.0.1",
-    "hono": "^4.9.2"
+    "hono": "^4.9.2",
+    "resend": "^6.0.1"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
@@ -52,7 +54,7 @@
     "prettier": "^3.2.5",
     "prisma": "^6.0.0",
     "typescript": "^5.3.0",
-    "wrangler": "^4.30.0"
+    "wrangler": "^4.31.0"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

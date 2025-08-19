@@ -9,34 +9,9 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { ChatMessage, mapPrismaArrayToApi, getBrazilReadTime, getBrazilTimeAsUTC } from '../types';
-
-export enum DigestPeriod {
-  DAILY = 'daily',
-  WEEKLY = 'weekly',
-  MONTHLY = 'monthly'
-}
-
-export interface DigestResult {
-  success: boolean;
-  data?: {
-    digest: string;
-    period: DigestPeriod;
-    start_date: string;
-    end_date: string;
-    total_notifications: number;
-    unread_count: number;
-    top_senders: string[];
-    urgent_notifications: any[];
-    processed_notifications: any[];
-    insights: {
-      most_active_day?: string;
-      categories?: Record<string, number>;
-      trends?: string;
-    };
-  };
-  error?: string;
-}
+import type { ChatMessage } from '../types';
+import { mapPrismaArrayToApi, getBrazilReadTime, getBrazilTimeAsUTC } from '../helpers';
+import { DigestPeriod, DigestResult } from '../types/digest';
 
 export class DigestService {
   private prisma: PrismaClient;
@@ -97,7 +72,7 @@ export class DigestService {
       // Análise de remetentes
       const senderCount: Record<string, number> = {};
       unreadNotificationsApi.forEach(n => {
-        senderCount[n.name] = (senderCount[n.name] || 0) + 1;
+        senderCount[n.email] = (senderCount[n.email] || 0) + 1;
       });
       const topSenders = Object.entries(senderCount)
         .sort((a, b) => b[1] - a[1])
@@ -340,11 +315,4 @@ ${insights.most_active_day ? `\n📅 DIA MAIS ATIVO: ${insights.most_active_day}
 
     return { systemPrompt, userPrompt };
   }
-}
-
-/**
- * Factory para criar instância do DigestService
- */
-export function createDigestService(prisma: PrismaClient, env: CloudflareBindings): DigestService {
-  return new DigestService(prisma, env);
 }

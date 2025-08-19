@@ -6,13 +6,26 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "negra-midia-api",
   "main": "src/index.ts",
-  "compatibility_date": "2025-08-16",
+  "compatibility_date": "2025-08-19",
   "assets": {
     "binding": "ASSETS",
     "directory": "./public"
   },
   "observability": {
     "enabled": true
+  },
+  "secrets_store_secrets": [
+    {
+      "binding": "RESEND_APIKEY",
+      "store_id": "64604f80a0004c0397ad24898a0d976b",
+      "secret_name": "RESEND_APIKEY"
+    }
+  ],
+  "vars": {
+    "CURRENT_URL": "https://negra-midia-api.hedgarbezerra35.workers.dev",
+    "AI_GATEWAY_NAME": "negra-midia",
+    "DIGEST_EMAIL_FROM": "digest@bytesforge.com.br",
+    "DIGEST_EMAIL_TO": "comunicacao@negramidia.net"
   },
   /**
    * D1 Database
@@ -22,7 +35,7 @@
     {
       "binding": "DB",
       "database_name": "negra-midia-db",
-      "database_id": "${D1_DATABASE_ID}"
+      "database_id": "b0cf9329-4048-473c-bebe-d7f8248b4ebd"
     }
   ],
   /**
@@ -41,8 +54,30 @@
   "triggers": {
     "crons": [
       //   "0 3 * * *", // Diário às 0h Brasil (3h UTC)
-      //   "0 3 * * 1", // Semanal às segundas-feiras 0h Brasil (3h UTC)
-      //   "0 3 1 * *" // Mensal no dia 1 às 0h Brasil (3h UTC)
+      "0 3 * * 1", // Semanal às segundas-feiras 0h Brasil (3h UTC)
+      "0 3 1 * *" // Mensal no dia 1 às 0h Brasil (3h UTC)
+    ]
+  },
+  "unsafe": {
+    "bindings": [
+      {
+        "name": "AI_RATE_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "1001",
+        "simple": {
+          "limit": 5,
+          "period": 60
+        }
+      },
+      {
+        "name": "API_RATE_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "1002",
+        "simple": {
+          "limit": 10,
+          "period": 60
+        }
+      }
     ]
   }
   /**

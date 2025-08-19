@@ -6,13 +6,12 @@ import {
   ProcessUnreadResponse,
   DailyDigestResponse,
   ApiResponse,
-  ChatMessage,
-  mapPrismaArrayToApi,
-  getBrazilReadTime,
-  getBrazilTimeAsUTC
+  ChatMessage
 } from '../types';
+import { mapPrismaArrayToApi, getBrazilReadTime, getBrazilTimeAsUTC } from '../helpers';
 import { getPrismaFromContext } from '../services/database';
-import { DigestPeriod } from '../services/digest';
+import { DigestPeriod } from '../types/digest';
+import { DigestService } from '../services/digest';
 
 const ai = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -163,7 +162,7 @@ ai.post('/process-unread', async c => {
 
     unreadApiNotifications.forEach(notification => {
       // Contar remetentes
-      senderCount[notification.name] = (senderCount[notification.name] || 0) + 1;
+      senderCount[notification.email] = (senderCount[notification.email] || 0) + 1;
 
       // Detectar urgência (palavras-chave no assunto)
       const urgentKeywords = ['urgente', 'importante', 'emergência', 'crítico', 'ação'];
@@ -300,37 +299,11 @@ Estatísticas:
   }
 });
 
-// POST /ai/analyze-unread - Analisar notificações não lidas SEM marcar como lidas
-ai.post('/analyze-unread', async c => {
-  try {
-    const request = await c.req.json<ProcessUnreadRequest>();
-    // Forçar mark_as_read = false para apenas análise
-    request.mark_as_read = false;
-
-    // Reutilizar a lógica do process-unread
-    return ai.fetch(
-      new Request(c.req.url.replace('/analyze-unread', '/process-unread'), {
-        method: 'POST',
-        headers: c.req.raw.headers,
-        body: JSON.stringify(request)
-      }),
-      c.env
-    );
-  } catch (error) {
-    const response: ProcessUnreadResponse = {
-      success: false,
-      error: `Erro ao analisar notificações: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
-    };
-    return c.json(response, 500);
-  }
-});
-
 // GET /ai/daily-digest - Resumo diário das notificações (usando Prisma)
 ai.get('/daily-digest', async c => {
   try {
     const prisma = getPrismaFromContext(c);
-    const { createDigestService } = await import('../services/digest');
-    const digestService = createDigestService(prisma, c.env);
+    const digestService = new DigestService(prisma, c.env);
 
     // Usar o DigestService para manter consistência com os cron jobs
     const digestResult = await digestService.generateDigest(DigestPeriod.DAILY, true);

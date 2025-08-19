@@ -3,13 +3,15 @@ import {
   AppNotification,
   CreateNotificationRequest,
   ApiResponse,
-  PaginationMeta,
-  NotificationSearchResponse,
+  PaginatedResponse,
+  NotificationSearchResponse
+} from '../types';
+import {
   mapPrismaToApi,
   mapPrismaArrayToApi,
   mapCreateRequestToPrisma,
   getBrazilReadTime
-} from '../types';
+} from '../helpers';
 import { getPrismaFromContext } from '../services/database';
 
 const notifications = new Hono<{ Bindings: CloudflareBindings }>();
@@ -65,7 +67,7 @@ notifications.get('/paginate', async c => {
 
     // Calcular metadados de paginação
     const totalPages = Math.ceil(total / limit);
-    const pagination: PaginationMeta = {
+    const pagination: PaginatedResponse = {
       page,
       limit,
       total,

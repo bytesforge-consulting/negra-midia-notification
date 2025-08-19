@@ -5,7 +5,7 @@
  * Responsável por executar tarefas agendadas como digest diário, semanal e mensal.
  */
 
-import { getBrazilTimeAsUTC } from '../types';
+import { getBrazilTimeAsUTC } from '../helpers';
 import { createPrismaClient } from '../services/database';
 import { createSchedulerService } from '../services/scheduler';
 

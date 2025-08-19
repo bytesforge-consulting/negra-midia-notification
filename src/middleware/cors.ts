@@ -10,17 +10,6 @@ const DEFAULT_CORS_CONFIG = {
   CORS_HEADERS: 'Content-Type,Authorization,X-Requested-With,X-API-Key'
 };
 
-// Log de origem das configurações (para debug)
-const logConfigSource = (env: CloudflareBindings) => {
-  const sources: string[] = [];
-
-  if (env.ALLOWED_ORIGINS && env.ALLOWED_ORIGINS !== DEFAULT_CORS_CONFIG.ALLOWED_ORIGINS) {
-    sources.push('ALLOWED_ORIGINS: Plataforma');
-  } else {
-    sources.push('ALLOWED_ORIGINS: wrangler.jsonc');
-  }
-};
-
 // Função para obter configuração de ambiente com fallbacks
 const getEnvConfig = (env: CloudflareBindings) => ({
   allowedOrigins: env.ALLOWED_ORIGINS || DEFAULT_CORS_CONFIG.ALLOWED_ORIGINS,
@@ -64,7 +53,6 @@ export const corsMiddleware = async (c: Context, next: Next) => {
 
   // Log das configurações e suas origens em desenvolvimento
   if (c.env.ENVIRONMENT === 'development') {
-    logConfigSource(c.env);
     console.log('🔧 CORS Configuração:', {
       origins: config.allowedOrigins,
       credentials: config.credentials,

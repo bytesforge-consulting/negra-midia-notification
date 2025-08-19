@@ -1,8 +1,10 @@
 import { Hono } from 'hono';
 import { corsMiddleware } from './middleware/cors';
 import { adaptiveLoggerMiddleware } from './middleware/logger';
-import { ApiResponse, getBrazilReadTime } from './types';
-import { scheduledHandler } from './handlers/scheduled';
+import { rateLimitMiddleware } from './middleware/ratelimiting';
+import type { ApiResponse } from './types';
+import { getBrazilReadTime } from './helpers';
+import { scheduledHandler } from './routes/scheduled';
 
 // Importar rotas
 import notificationsRoutes from './routes/notifications';
@@ -16,8 +18,11 @@ app.use('*', adaptiveLoggerMiddleware);
 // Aplicar middleware CORS globalmente
 app.use('*', corsMiddleware);
 
+// Aplicar middleware de rate limiting para rotas específicas
+app.use('*', rateLimitMiddleware);
+
 // Endpoint de debug (remover após teste)
-app.get('/api/debug', c => {
+app.get('/api/__debug', async c => {
   return c.json({
     method: c.req.method,
     url: c.req.url,

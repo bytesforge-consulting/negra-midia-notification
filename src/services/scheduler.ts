@@ -10,7 +10,9 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { createDigestService, DigestPeriod } from './digest';
+import { DigestService } from './digest';
+import { DigestEmailService, DigestEmailData } from './digest-email';
+import { DigestData, DigestPeriod } from '../types/digest';
 
 export class SchedulerService {
   private prisma: PrismaClient;
@@ -36,10 +38,10 @@ export class SchedulerService {
     console.log(`[CRON DAILY] Iniciado em: ${new Date(scheduledTime).toISOString()}`);
 
     try {
-      const digestService = createDigestService(this.prisma, this.env);
+      const digestService = new DigestService(this.prisma, this.env);
 
       console.log('[CRON DAILY] Gerando digest diário...');
-      const digestResult = await digestService.generateDigest(DigestPeriod.DAILY, true);
+      const digestResult = await digestService.generateDigest(DigestPeriod.DAILY, false);
 
       if (digestResult.success) {
         console.log(
@@ -48,6 +50,9 @@ export class SchedulerService {
         console.log(
           `[CRON DAILY] Preview do digest: ${digestResult.data?.digest.substring(0, 200)}...`
         );
+
+        // Enviar digest por e-mail
+        await this.sendDigestWithEmailService(DigestPeriod.DAILY, digestResult.data!);
       } else {
         console.error('[CRON DAILY] Falha na geração do digest:', digestResult.error);
       }
@@ -73,7 +78,7 @@ export class SchedulerService {
     console.log(`[CRON WEEKLY] Iniciado em: ${new Date(scheduledTime).toISOString()}`);
 
     try {
-      const digestService = createDigestService(this.prisma, this.env);
+      const digestService = new DigestService(this.prisma, this.env);
 
       console.log('[CRON WEEKLY] Gerando digest semanal...');
       const digestResult = await digestService.generateDigest(DigestPeriod.WEEKLY, true);
@@ -88,6 +93,9 @@ export class SchedulerService {
 
         // Log do digest para monitoramento
         console.log(`[CRON WEEKLY] Preview: ${digestResult.data?.digest.substring(0, 200)}...`);
+
+        // Enviar digest semanal por e-mail
+        await this.sendDigestWithEmailService(DigestPeriod.WEEKLY, digestResult.data!);
       } else {
         console.error('[CRON WEEKLY] Falha na geração do digest:', digestResult.error);
       }
@@ -115,7 +123,7 @@ export class SchedulerService {
     console.log(`[CRON MONTHLY] Iniciado em: ${new Date(scheduledTime).toISOString()}`);
 
     try {
-      const digestService = createDigestService(this.prisma, this.env);
+      const digestService = new DigestService(this.prisma, this.env);
 
       console.log('[CRON MONTHLY] Gerando digest mensal...');
       const digestResult = await digestService.generateDigest(DigestPeriod.MONTHLY, true);
@@ -133,6 +141,9 @@ export class SchedulerService {
 
         // Log do digest para arquivo/monitoramento
         console.log(`[CRON MONTHLY] Preview: ${digestResult.data?.digest.substring(0, 300)}...`);
+
+        // Enviar digest mensal por e-mail
+        await this.sendDigestWithEmailService(DigestPeriod.MONTHLY, digestResult.data!);
       } else {
         console.error('[CRON MONTHLY] Falha na geração do digest:', digestResult.error);
       }
@@ -140,6 +151,37 @@ export class SchedulerService {
     } catch (error) {
       console.error('[CRON MONTHLY] Erro no job mensal:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Enviar digest por e-mail usando DigestEmailService
+   */
+  private async sendDigestWithEmailService(period: string, digestData: DigestData): Promise<void> {
+    try {
+      const emailService = new DigestEmailService(this.env);
+
+      const emailData: DigestEmailData = {
+        period,
+        start_date: digestData.start_date,
+        end_date: digestData.end_date,
+        total_notifications: digestData.total_notifications,
+        unread_count: digestData.unread_count,
+        urgent_notifications: digestData.urgent_notifications,
+        top_senders: digestData.top_senders,
+        digest: digestData.digest,
+        insights: digestData.insights
+      };
+
+      const result = await emailService.createAndSendDigest(emailData);
+
+      if (result.success) {
+        console.log(`[CRON] Digest ${period} enviado com sucesso! ID: ${result.emailId}`);
+      } else {
+        console.error(`[CRON] Falha ao enviar digest ${period}: ${result.error}`);
+      }
+    } catch (error) {
+      console.error(`[CRON] Erro ao enviar digest ${period}:`, error);
     }
   }
 }

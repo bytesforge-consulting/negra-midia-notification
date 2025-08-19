@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Digest {{periodLabel}} - Negra Mídia</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      background: #012340;
+      color: #f2f2f2;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .content {
+      background: #f2f2f2;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h1>📊 Digest {{periodLabel}}</h1>
+    <p>{{startDate}} - {{endDate}}</p>
+  </div>
+  <div class="content">
+    <h2>📈 Estatísticas</h2>
+    <p><strong>Total:</strong> {{totalNotifications}} notificações</p>
+    <p><strong>Não lidas:</strong> {{unreadCount}}</p>
+    <p><strong>Urgentes:</strong> {{urgentCount}}</p>
+    <h3>🤖 Resumo da IA</h3>
+    <p>{{digest}}</p>
+  </div>
+  <div style="text-align: center; font-size: 12px; color: #b86849; margin-top: 20px">
+    <p>Gerado automaticamente em {{currentTime}}</p>
+    <p>Gerado e enviado por <strong>Bytes Forge Consultoria</strong></p>
+  </div>
+</body>
+
+</html>
