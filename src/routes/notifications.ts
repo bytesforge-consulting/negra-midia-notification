@@ -183,10 +183,10 @@ notifications.post('/', async c => {
     const body = await c.req.json<CreateNotificationRequest>();
 
     // Validação básica
-    if (!body.name || !body.email || !body.phone || !body.body || !body.subject) {
+    if (!body.name || !body.email || !body.body || !body.subject) {
       const response: ApiResponse<never> = {
         success: false,
-        error: 'Todos os campos são obrigatórios: name, email, phone, body, subject'
+        error: 'Todos os campos são obrigatórios: name, email, body, subject'
       };
       return c.json(response, 400);
     }
