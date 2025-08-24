@@ -1,35 +1,26 @@
 /**
- * Helpers de Data e Tempo
- *
- * Funções utilitárias para manipulação de datas e horários,
- * especialmente para conversões entre UTC e horário do Brasil.
- */
-
-import { utcToZonedTime } from 'date-fns-tz';
-
-/**
  * Obter hora atual do Brasil convertida para UTC para salvar no banco
  *
  * @returns Data/hora atual do Brasil convertida para UTC
  */
 export const getBrazilTimeAsUTC = (): Date => {
-  const timeZone = 'America/Sao_Paulo';
   const now = new Date();
-  const brazilTime = utcToZonedTime(now, timeZone);
 
-  const adjustedDate = new Date(
+  // Converter para horário do Brasil (UTC-3)
+  const brazilTime = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+
+  // Retornar como UTC
+  return new Date(
     Date.UTC(
-      brazilTime.getFullYear(),
-      brazilTime.getMonth(),
-      brazilTime.getDate(),
-      brazilTime.getHours(),
-      brazilTime.getMinutes(),
-      brazilTime.getSeconds(),
-      brazilTime.getMilliseconds()
+      brazilTime.getUTCFullYear(),
+      brazilTime.getUTCMonth(),
+      brazilTime.getUTCDate(),
+      brazilTime.getUTCHours(),
+      brazilTime.getUTCMinutes(),
+      brazilTime.getUTCSeconds(),
+      brazilTime.getUTCMilliseconds()
     )
   );
-
-  return adjustedDate;
 };
 
 /**

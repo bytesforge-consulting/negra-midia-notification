@@ -19,6 +19,16 @@
       "binding": "RESEND_APIKEY",
       "store_id": "64604f80a0004c0397ad24898a0d976b",
       "secret_name": "RESEND_APIKEY"
+    },
+    {
+      "binding": "NEGRA_MIDIA_API_PASSWORD",
+      "store_id": "64604f80a0004c0397ad24898a0d976b",
+      "secret_name": "NEGRA_MIDIA_API_PASSWORD"
+    },
+    {
+      "binding": "NEGRA_MIDIA_API_USER",
+      "store_id": "64604f80a0004c0397ad24898a0d976b",
+      "secret_name": "NEGRA_MIDIA_API_USER"
     }
   ],
   "vars": {

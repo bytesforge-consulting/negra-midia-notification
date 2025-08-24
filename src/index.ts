@@ -9,6 +9,7 @@ import { scheduledHandler } from './routes/scheduled';
 // Importar rotas
 import notificationsRoutes from './routes/notifications';
 import aiRoutes from './routes/ai';
+import { authMiddleware } from './middleware/auth';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -21,8 +22,11 @@ app.use('*', corsMiddleware);
 // Aplicar middleware de rate limiting para rotas específicas
 app.use('*', rateLimitMiddleware);
 
+// Aplicar middleware de autenticação
+app.use('/api/*', authMiddleware);
+
 // Endpoint de debug (remover após teste)
-app.get('/api/__debug', async c => {
+app.get('/__debug', async c => {
   return c.json({
     method: c.req.method,
     url: c.req.url,
@@ -33,7 +37,7 @@ app.get('/api/__debug', async c => {
 });
 
 // Endpoints de verificação de saúde - com e sem prefixo
-app.get('/api/health', c => {
+app.get('/__health', c => {
   const response: ApiResponse<{
     status: string;
     timestamp: string;
@@ -116,6 +120,17 @@ app.notFound(c => {
 app.onError((error, c) => {
   console.error('Erro não tratado:', error);
 
+  // Verificar se é um erro de autenticação básica
+  if (error && typeof error === 'object' && 'status' in error && error.status === 401) {
+    // Retornar erro 401 para autenticação básica
+    const authErrorResponse: ApiResponse<never> = {
+      success: false,
+      error: 'Autenticação necessária'
+    };
+    return c.json(authErrorResponse, 401);
+  }
+
+  // Para outros erros, retornar 500
   const response: ApiResponse<never> = {
     success: false,
     error: JSON.stringify(error)
