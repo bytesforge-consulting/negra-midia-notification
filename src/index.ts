@@ -22,19 +22,28 @@ app.use('/api/*', corsMiddleware);
 // Aplicar middleware de autenticação
 app.use('/api/*', authMiddleware);
 
-// Endpoint de debug (remover após teste)
-app.get('/__debug', async c => {
-  return c.json({
-    method: c.req.method,
-    url: c.req.url,
-    path: c.req.path,
-    headers: Object.fromEntries(c.req.raw.headers.entries()),
-    timestamp: getBrazilReadTime().toISOString()
-  });
+// Endpoints de depuração (com prefixo /api)
+app.get('/api/__debug', async c => {
+  const response: ApiResponse<{
+    method: string;
+    url: string;
+    path: string;
+    headers: Record<string, string>;
+    timestamp: string;
+  }> = {
+    success: true,
+    data: {
+      method: c.req.method,
+      url: c.req.url,
+      path: c.req.path,
+      headers: Object.fromEntries(c.req.raw.headers.entries()),
+      timestamp: getBrazilReadTime().toISOString()
+    }
+  };
+  return c.json(response);
 });
 
-// Endpoints de verificação de saúde - com e sem prefixo
-app.get('/__health', c => {
+app.get('/api/__health', c => {
   const response: ApiResponse<{
     status: string;
     timestamp: string;

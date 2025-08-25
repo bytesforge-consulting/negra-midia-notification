@@ -52,6 +52,12 @@ const isOriginAllowed = (origin: string | undefined, allowedOrigins: string): bo
 export const corsMiddleware = async (c: Context, next: Next) => {
   const config = getEnvConfig(c.env);
 
+  // Pular validação CORS para endpoints de depuração
+  const isDebugEndpoint = c.req.path.startsWith('/api/__');
+  if (isDebugEndpoint) {
+    return next();
+  }
+
   // Log das configurações e suas origens em desenvolvimento
   if (c.req.url.includes('localhost')) {
     console.log('🔧 CORS Configuração:', {

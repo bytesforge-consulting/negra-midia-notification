@@ -25,6 +25,14 @@ Esta API oferece uma solução completa de notificações com recursos avançado
 - **Timezone Brasil**: Horários automáticos em UTC-3 (considera horário de verão)
 - **Paginação inteligente**: Busca com filtros por nome/email
 - **Auto-marcação**: Notificações marcadas como lidas ao acessar detalhes
+- **Telefone Opcional**: Campo `phone` é opcional em todas as operações
+
+### Padronização de Respostas
+
+- **ApiResponse Padronizado**: Todas as respostas seguem o formato `{ success: boolean, data?: T, error?: string }`
+- **Type Safety**: TypeScript garante consistência em todos os endpoints
+- **Middlewares Padronizados**: Rate limiting, CORS e autenticação usam o mesmo formato
+- **Tratamento de Erros**: Erros padronizados com códigos HTTP apropriados
 
 ### Inteligência Artificial
 
@@ -40,6 +48,13 @@ Esta API oferece uma solução completa de notificações com recursos avançado
 - **Job Semanal**: Segundas 0h Brasil - Análise semanal
 - **Job Mensal**: Dia 1 0h Brasil - Relatórios mensais
 - **Reutilização de código**: Mesma lógica dos endpoints HTTP
+
+### Templates HTML para Emails
+
+- **Templates dinâmicos**: Carregados via `CURRENT_URL` + `/public/templates/`
+- **Digest inteligente**: Templates para emails de resumo diário/semanal/mensal
+- **Personalização**: Templates com dados processados pela IA
+- **Responsivo**: Templates otimizados para diferentes dispositivos
 
 ## Tecnologias
 
@@ -128,6 +143,21 @@ wrangler d1 list
 # Se não tiver: clique "Create gateway"
 ```
 
+### Configurar CURRENT_URL
+
+A variável `CURRENT_URL` é essencial para carregar os templates HTML dos emails de digest. Ela define a URL base onde os templates estão hospedados.
+
+**Valores padrão:**
+
+- **Desenvolvimento**: `http://localhost:8787`
+- **Produção**: `https://negra-midia-api.hedgarbezerra35.workers.dev`
+
+**Uso:**
+
+- Os templates HTML são carregados dinamicamente via `fetch()` usando esta URL base
+- Necessária para o funcionamento correto dos emails de digest com IA
+- Deve apontar para o domínio onde a API está rodando
+
 ### Arquivo .dev.vars
 
 ```bash
@@ -139,26 +169,61 @@ CORS_CREDENTIALS=true
 CORS_MAX_AGE=86400
 CORS_METHODS=GET,POST,PUT,DELETE,OPTIONS,PATCH
 CORS_HEADERS=Content-Type,Authorization,X-Requested-With,X-API-Key,Accept
+
+# URL base para carregar templates HTML (desenvolvimento)
+CURRENT_URL=http://localhost:8787
+
+# Configurações de Digest Email
+DIGEST_EMAIL_FROM=digest@bytesforge.com.br
+DIGEST_EMAIL_TO=seu-email@exemplo.com
+
+# Autenticação da API
+NEGRA_MIDIA_API_USER=dev_user
+NEGRA_MIDIA_API_PASSWORD=dev_password
+
+# API Key do Resend para envio de emails
+RESEND_APIKEY=re_1234567890abcdef1234567890abcdef12345678
 ```
 
 ### Verificação da Instalação
 
 ```bash
 # Health check
-curl http://localhost:8787/health
+curl http://localhost:8787/api/__health
+
+# Resposta esperada:
+{
+  "success": true,
+  "data": {
+    "status": "ok",
+    "timestamp": "2024-01-15T10:30:00.000Z",
+    "version": "1.0.0",
+    "services": ["notifications", "ai", "database"]
+  }
+}
 
 # Testar IA
-curl -X POST http://localhost:8787/ai/generate \
+curl -X POST http://localhost:8787/api/ai/generate \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "Teste"}]}'
 
-# Criar notificação
-curl -X POST http://localhost:8787/notifications \
+# Criar notificação (phone é opcional)
+curl -X POST http://localhost:8787/api/notifications \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Teste",
     "email": "teste@exemplo.com",
     "phone": "11999999999",
+    "subject": "Teste da API",
+    "body": "Primeira notificação"
+  }'
+
+# Ou sem telefone:
+curl -X POST http://localhost:8787/api/notifications \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Teste",
+    "email": "teste@exemplo.com",
     "subject": "Teste da API",
     "body": "Primeira notificação"
   }'
@@ -194,10 +259,29 @@ curl -X POST http://localhost:8787/notifications \
 
 ## Endpoints da API
 
+### Formato de Resposta Padronizado
+
+Todos os endpoints retornam respostas no formato `ApiResponse<T>`:
+
+```typescript
+// ✅ Resposta de Sucesso
+{
+  "success": true,
+  "data": { /* dados da resposta */ }
+}
+
+// ✅ Resposta de Erro
+{
+  "success": false,
+  "error": "Mensagem de erro descritiva"
+}
+```
+
 ### Sistema
 
-- `GET /` - Informações da API e endpoints disponíveis
-- `GET /health` - Status dos serviços (notifications, ai, database)
+- `GET /api` - Informações da API e endpoints disponíveis
+- `GET /api/__health` - Status dos serviços (notifications, ai, database) - **Sem CORS**
+- `GET /api/__debug` - Endpoint de debug (desenvolvimento) - **Sem CORS**
 
 ### Notificações
 
@@ -225,7 +309,7 @@ curl -X POST http://localhost:8787/notifications \
 ### Criar Notificação
 
 ```bash
-curl -X POST http://localhost:8787/notifications \
+curl -X POST http://localhost:8787/api/notifications \
   -H "Content-Type: application/json" \
   -d '{
     "name": "João Silva",
@@ -234,30 +318,92 @@ curl -X POST http://localhost:8787/notifications \
     "subject": "Pedido Confirmado",
     "body": "Seu pedido foi confirmado e será entregue em 3 dias."
   }'
+
+# Resposta:
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "João Silva",
+    "email": "joao@empresa.com",
+    "phone": "11999999999",
+    "subject": "Pedido Confirmado",
+    "body": "Seu pedido foi confirmado e será entregue em 3 dias.",
+    "sent_at": "2024-01-15T10:30:00.000Z",
+    "read_at": null
+  }
+}
+
+# Nota: O campo "phone" é opcional e pode ser omitido
 ```
 
 ### Gerar Conteúdo com IA
 
 ```bash
-curl -X POST http://localhost:8787/ai/generate-notification \
+curl -X POST http://localhost:8787/api/ai/generate \
   -H "Content-Type: application/json" \
   -d '{
-    "context": "Cliente fez pedido de R$ 299,90 com entrega em 5 dias",
-    "type": "email",
-    "tone": "friendly",
-    "language": "pt-BR"
+    "messages": [
+      {
+        "role": "user",
+        "content": "Gere um email amigável para confirmar um pedido de R$ 299,90"
+      }
+    ]
   }'
+
+# Resposta:
+{
+  "success": true,
+  "data": {
+    "response": "Olá! Confirmamos o recebimento do seu pedido no valor de R$ 299,90...",
+    "usage": {
+      "prompt_tokens": 25,
+      "completion_tokens": 150,
+      "total_tokens": 175
+    }
+  }
+}
 ```
 
 ### Processar Notificações com IA
 
 ```bash
-curl -X POST http://localhost:8787/ai/process-unread \
+curl -X POST http://localhost:8787/api/ai/process-unread \
   -H "Content-Type: application/json" \
   -d '{
     "mark_as_read": true,
     "max_notifications": 20
   }'
+
+# Resposta:
+{
+  "success": true,
+  "data": {
+    "summary": "Processadas 5 notificações não lidas. Principais temas: pedidos (3), suporte (2)...",
+    "notifications_processed": [
+      {
+        "id": 1,
+        "name": "João Silva",
+        "email": "joao@empresa.com",
+        "phone": "11999999999",
+        "subject": "Pedido Confirmado",
+        "body": "Seu pedido foi confirmado...",
+        "sent_at": "2024-01-15T10:30:00.000Z",
+        "read_at": "2024-01-15T11:00:00.000Z"
+      }
+    ],
+    "total_unread": 5,
+    "marked_as_read": 5,
+    "insights": {
+      "most_common_senders": ["joao@empresa.com", "maria@empresa.com"],
+      "urgent_count": 1,
+      "categories": {
+        "pedidos": 3,
+        "suporte": 2
+      }
+    }
+  }
+}
 ```
 
 ## Cron Jobs
@@ -302,10 +448,10 @@ curl "http://localhost:8787/__scheduled?cron=0+3+1+*+*"    # Mensal
 
 ```bash
 # O endpoint /ai/daily-digest usa a mesma lógica do job diário
-curl http://localhost:8787/ai/daily-digest
+curl http://localhost:8787/api/ai/daily-digest
 
 # Testar processamento (mesma lógica dos jobs)
-curl -X POST http://localhost:8787/ai/process-unread \
+curl -X POST http://localhost:8787/api/ai/process-unread \
   -H "Content-Type: application/json" \
   -d '{"mark_as_read": true, "max_notifications": 10}'
 ```
@@ -408,17 +554,17 @@ npm run deploy
 npx wrangler deploy --minify
 
 # Verificar deploy
-curl https://negra-midia-notify-api.workers.dev/health
+curl https://negra-midia-notify-api.workers.dev/api/__health
 ```
 
 #### 6. Verificações Pós-Deploy
 
 ```bash
 # 1. Health check
-curl https://negra-midia-notify-api.workers.dev/health
+curl https://negra-midia-notify-api.workers.dev/api/__health
 
 # 2. Testar criação de notificação
-curl -X POST https://negra-midia-notify-api.workers.dev/notifications \
+curl -X POST https://negra-midia-notify-api.workers.dev/api/notifications \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Teste Produção",
@@ -429,7 +575,7 @@ curl -X POST https://negra-midia-notify-api.workers.dev/notifications \
   }'
 
 # 3. Testar IA
-curl -X POST https://negra-midia-notify-api.workers.dev/ai/generate \
+curl -X POST https://negra-midia-notify-api.workers.dev/api/ai/generate \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "API em produção!"}]}'
 
@@ -445,6 +591,7 @@ npx wrangler tail | grep CRON
 ENVIRONMENT=development
 ALLOWED_ORIGINS=*
 CORS_CREDENTIALS=false
+CURRENT_URL=http://localhost:8787
 ```
 
 ### Produção (Cloudflare Secrets)
@@ -453,7 +600,22 @@ CORS_CREDENTIALS=false
 ENVIRONMENT=production
 ALLOWED_ORIGINS=https://negramidia.com,https://app.negramidia.com
 CORS_CREDENTIALS=true
+CURRENT_URL=https://negra-midia-api.hedgarbezerra35.workers.dev
 ```
+
+## Códigos de Status HTTP
+
+A API retorna códigos de status HTTP apropriados junto com o formato `ApiResponse`:
+
+- **200 OK**: Operação bem-sucedida
+- **201 Created**: Recurso criado com sucesso
+- **400 Bad Request**: Dados inválidos na requisição
+- **401 Unauthorized**: Autenticação necessária
+- **403 Forbidden**: Origem não permitida (CORS)
+- **404 Not Found**: Recurso não encontrado
+- **409 Conflict**: Conflito (ex: notificação já lida)
+- **429 Too Many Requests**: Rate limit excedido
+- **500 Internal Server Error**: Erro interno do servidor
 
 ## Troubleshooting
 
@@ -554,6 +716,19 @@ cat .dev.vars
 # Para produção, usar Dashboard ou wrangler secrets
 ```
 
+**"Templates HTML não carregam"**
+
+```bash
+# Verificar se CURRENT_URL está configurada
+echo $CURRENT_URL
+
+# Verificar se templates estão acessíveis
+curl http://localhost:8787/public/templates/digest/base.html
+
+# Para produção, verificar se CURRENT_URL aponta para o domínio correto
+curl https://negra-midia-api.hedgarbezerra35.workers.dev/public/templates/digest/base.html
+```
+
 ### Comandos de Debug
 
 **Verificar configuração atual:**
@@ -612,18 +787,18 @@ npx wrangler rollback a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6
 
 ```bash
 # Health check local
-curl http://localhost:8787/health
+curl http://localhost:8787/api/__health
 
 # Health check produção
-curl https://negra-midia-notify-api.workers.dev/health
+curl https://negra-midia-notify-api.workers.dev/api/__health
 
 # Teste completo local
-curl -X POST http://localhost:8787/notifications \
+curl -X POST http://localhost:8787/api/notifications \
   -H "Content-Type: application/json" \
   -d '{"name":"Test","email":"test@test.com","phone":"11999999999","subject":"Test","body":"Test"}'
 
 # Teste completo produção
-curl -X POST https://negra-midia-notify-api.workers.dev/notifications \
+curl -X POST https://negra-midia-notify-api.workers.dev/api/notifications \
   -H "Content-Type: application/json" \
   -d '{"name":"Test","email":"test@test.com","phone":"11999999999","subject":"Test","body":"Test"}'
 ```
@@ -655,25 +830,46 @@ export class NotificationService {
 
   constructor(private http: HttpClient) {}
 
-  getNotifications(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/notifications`);
+  // Interface para tipagem das respostas
+  interface ApiResponse<T> {
+    success: boolean;
+    data?: T;
+    error?: string;
   }
 
-  createNotification(notification: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/notifications`, notification);
+  interface Notification {
+    id?: number;
+    name: string;
+    email: string;
+    phone?: string; // Opcional
+    body: string;
+    subject: string;
+    sent_at: Date;
+    read_at: Date | null;
   }
 
-  generateWithAI(context: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/ai/generate-notification`, {
-      context,
-      type: 'email',
-      tone: 'friendly',
-      language: 'pt-BR'
+  getNotifications(): Observable<ApiResponse<Notification[]>> {
+    return this.http.get<ApiResponse<Notification[]>>(`${this.apiUrl}/notifications`);
+  }
+
+  createNotification(notification: Omit<Notification, 'id' | 'sent_at' | 'read_at'>): Observable<ApiResponse<Notification>> {
+    return this.http.post<ApiResponse<Notification>>(`${this.apiUrl}/notifications`, notification);
+  }
+
+  generateWithAI(messages: Array<{role: string, content: string}>): Observable<ApiResponse<{response: string, usage?: any}>> {
+    return this.http.post<ApiResponse<{response: string, usage?: any}>>(`${this.apiUrl}/ai/generate`, {
+      messages
     });
   }
 
-  getDailyDigest(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/ai/daily-digest`);
+  getDailyDigest(): Observable<ApiResponse<any>> {
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/ai/daily-digest`);
+  }
+
+  // Tratamento de erros padronizado
+  private handleError(error: any): Observable<never> {
+    console.error('API Error:', error);
+    return throwError(() => new Error(error.error?.error || 'Erro desconhecido'));
   }
 }
 ```
