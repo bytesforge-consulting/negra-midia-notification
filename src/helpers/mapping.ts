@@ -38,7 +38,7 @@ export const mapPrismaToApi = (notification: PrismaNotification): AppNotificatio
 export const mapCreateRequestToPrisma = (request: CreateNotificationRequest) => ({
   name: request.name,
   email: request.email,
-  phone: request.phone,
+  phone: request.phone || null,
   body: request.body,
   subject: request.subject,
   sent_at: getBrazilTimeAsUTC()

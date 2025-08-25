@@ -16,7 +16,7 @@ model Notification {
   id      Int       @id @default(autoincrement())
   name    String    // Nome do remetente
   email   String    // Email do remetente  
-  phone   String    // Telefone do remetente
+  phone   String?   // Telefone do remetente (opcional)
   body    String    // Conteúdo da notificação
   subject String    // Assunto da notificação
   sent_at DateTime  // Data de envio (definida manualmente no código)

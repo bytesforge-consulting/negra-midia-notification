@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     email TEXT NOT NULL,
-    phone TEXT NOT NULL,
+    phone TEXT NULL,
     body TEXT NOT NULL,
     subject TEXT NOT NULL,
     sent_at DATETIME NOT NULL,

@@ -11,7 +11,7 @@ export interface AppNotification {
   id?: number;
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
   body: string;
   subject: string;
   sent_at: Date;
@@ -23,7 +23,7 @@ export type PrismaNotification = NotificationPrismaType;
 export interface CreateNotificationRequest {
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
   body: string;
   subject: string;
 }

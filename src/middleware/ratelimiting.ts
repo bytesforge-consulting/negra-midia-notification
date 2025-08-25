@@ -1,4 +1,5 @@
 import { Context, Next } from 'hono';
+import type { ApiResponse } from '../types/common';
 
 export const rateLimitMiddleware = async (c: Context, next: Next) => {
   const env = c.env as CloudflareBindings;
@@ -14,14 +15,11 @@ export const rateLimitMiddleware = async (c: Context, next: Next) => {
 
   // Se excedeu o limite, retorna erro 429
   if (!success) {
-    return c.json(
-      {
-        success: false,
-        error: 'Too Many Requests',
-        message: `Rate limit excedido. Tente novamente em instantes.`
-      },
-      429
-    );
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Rate limit excedido. Tente novamente em instantes.'
+    };
+    return c.json(response, 429);
   }
   // Continua para o próximo middleware/handler
   await next();

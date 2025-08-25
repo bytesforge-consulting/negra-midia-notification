@@ -1,14 +1,13 @@
 import type { CreateEmailOptions, CreateEmailRequestOptions } from 'resend';
+import type { ApiResponse } from './common';
 
 export interface EmailRequest {
   payload: CreateEmailOptions;
   options?: CreateEmailRequestOptions;
 }
 
-export interface EmailResponse {
-  success: boolean;
-  data?: {
-    id: string;
-  };
-  error?: string;
+export interface EmailData {
+  id: string;
 }
+
+export type EmailResponse = ApiResponse<EmailData>;

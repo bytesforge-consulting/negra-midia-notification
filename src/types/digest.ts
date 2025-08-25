@@ -1,4 +1,6 @@
 /* eslint-disable no-unused-vars */
+import type { ApiResponse } from './common';
+
 export enum DigestPeriod {
   DAILY = 'daily',
   WEEKLY = 'weekly',
@@ -22,8 +24,4 @@ export interface DigestData {
   };
 }
 
-export interface DigestResult {
-  success: boolean;
-  data?: DigestData;
-  error?: string;
-}
+export type DigestResult = ApiResponse<DigestData>;

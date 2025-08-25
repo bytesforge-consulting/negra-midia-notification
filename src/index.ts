@@ -15,13 +15,10 @@ const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 // Aplicar middleware de logging primeiro (captura todas as requisições)
 app.use('*', adaptiveLoggerMiddleware);
-
-// Aplicar middleware CORS globalmente
-app.use('*', corsMiddleware);
-
 // Aplicar middleware de rate limiting para rotas específicas
 app.use('*', rateLimitMiddleware);
-
+// Aplicar middleware CORS globalmente
+app.use('/api/*', corsMiddleware);
 // Aplicar middleware de autenticação
 app.use('/api/*', authMiddleware);
 

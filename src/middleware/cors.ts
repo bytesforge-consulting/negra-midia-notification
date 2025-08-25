@@ -1,12 +1,13 @@
 import { cors } from 'hono/cors';
 import type { Context, Next } from 'hono';
+import type { ApiResponse } from '../types/common';
 
 // Configurações padrão de CORS (fallback se não definidas na plataforma)
 const DEFAULT_CORS_CONFIG = {
-  ALLOWED_ORIGINS: '*', // Desenvolvimento
+  ALLOWED_ORIGINS: '*.negramidia.net', // Permite qualquer subdomínio de negramidia.net
   CORS_CREDENTIALS: 'false',
   CORS_MAX_AGE: '86400',
-  CORS_METHODS: 'GET,POST,PUT,DELETE,OPTIONS',
+  CORS_METHODS: 'GET',
   CORS_HEADERS: 'Content-Type,Authorization,X-Requested-With,X-API-Key'
 };
 
@@ -22,7 +23,7 @@ const getEnvConfig = (env: CloudflareBindings) => ({
 // Função para validar origem
 const isOriginAllowed = (origin: string | undefined, allowedOrigins: string): boolean => {
   if (!origin) {
-    return true;
+    return false;
   } // Requests diretos (sem origem)
 
   const origins = allowedOrigins.split(',').map(o => o.trim());
@@ -52,7 +53,7 @@ export const corsMiddleware = async (c: Context, next: Next) => {
   const config = getEnvConfig(c.env);
 
   // Log das configurações e suas origens em desenvolvimento
-  if (c.env.ENVIRONMENT === 'development') {
+  if (c.req.url.includes('localhost')) {
     console.log('🔧 CORS Configuração:', {
       origins: config.allowedOrigins,
       credentials: config.credentials,
@@ -61,15 +62,22 @@ export const corsMiddleware = async (c: Context, next: Next) => {
     });
   }
 
+  // Verificar se a origem é permitida antes de aplicar o CORS
+  const origin = c.req.header('Origin');
+  const allowed = isOriginAllowed(origin, config.allowedOrigins);
+
+  if (!allowed) {
+    console.warn(`❌ CORS: Origem rejeitada: ${origin}`);
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Origem não permitida'
+    };
+    return c.json(response, 403);
+  }
+
   const corsHandler = cors({
     origin: (origin, _ctx) => {
-      const allowed = isOriginAllowed(origin, config.allowedOrigins);
-
-      if (!allowed && c.env.ENVIRONMENT === 'development') {
-        console.warn(`❌ CORS: Origem rejeitada: ${origin}`);
-      }
-
-      return allowed ? origin : null;
+      return isOriginAllowed(origin, config.allowedOrigins) ? origin : null;
     },
     allowMethods: config.methods,
     allowHeaders: config.headers,
